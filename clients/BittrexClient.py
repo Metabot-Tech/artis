@@ -5,7 +5,7 @@ import time
 
 from urllib.parse import urlencode
 from clients.BaseClient import BaseClient
-from schemas.Bittrex.BalanceResponseSchema import BalanceResponseSchema
+from schemas.Bittrex.BalanceSchema import BalanceSchema
 
 BUY_ORDERBOOK = 'buy'
 SELL_ORDERBOOK = 'sell'
@@ -52,7 +52,7 @@ class BittrexClient(BaseClient):
 
     def get_balance(self, currency):
         response = self.api_query('getbalance', {'currency': currency})
-        return BalanceResponseSchema().load(response).data
+        return BalanceSchema().load(response['result']).data
 
     def get_balances(self):
         pass
