@@ -20,3 +20,19 @@ def update_transaction(transaction):
         session.close()
 
     return transaction
+
+
+def upsert_trade(trade):
+    session = db.session()
+
+    try:
+        session.add(trade)
+        session.commit()
+        session.refresh(trade)
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+    return trade

@@ -19,6 +19,6 @@ Base.metadata.create_all(Engine)
 def session():
     return Session()
 
+
 def get_engine():
     return Engine
-
