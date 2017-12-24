@@ -5,6 +5,5 @@ __pycache__/
 .idea/*
 
 # Settings
-settings/settings.yml
+settings.yml
 .env
-alembic.ini

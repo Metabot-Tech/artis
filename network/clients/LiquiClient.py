@@ -1,11 +1,12 @@
-import time
-import requests
 import hashlib
 import hmac
-
+import time
 from urllib.parse import urlencode
-from clients.BaseClient import *
-from schemas.Liqui.AccountSchema import AccountSchema
+
+import requests
+
+from network.clients.BaseClient import *
+from network.schemas.Liqui import AccountSchema
 
 PUBLIC_SET = ['info', 'ticker', 'depth', 'trades']
 

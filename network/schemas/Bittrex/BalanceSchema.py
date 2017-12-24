@@ -1,5 +1,6 @@
 from marshmallow import Schema, fields, post_load
-from models.Bittrex.Balance import Balance
+
+from network.models.Bittrex.Balance import Balance
 
 
 class BalanceSchema(Schema):

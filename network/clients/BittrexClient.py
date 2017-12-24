@@ -1,11 +1,12 @@
-import requests
 import hashlib
 import hmac
 import time
-
 from urllib.parse import urlencode
-from clients.BaseClient import BaseClient
-from schemas.Bittrex.BalanceSchema import BalanceSchema
+
+import requests
+
+from network.clients.BaseClient import BaseClient
+from network.schemas.Bittrex.BalanceSchema import BalanceSchema
 
 BUY_ORDERBOOK = 'buy'
 SELL_ORDERBOOK = 'sell'

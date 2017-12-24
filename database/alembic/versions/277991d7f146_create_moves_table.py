@@ -20,14 +20,13 @@ def upgrade():
     op.create_table('moves',
                     sa.Column('id', sa.Integer, primary_key=True),
                     sa.Column('transaction', sa.Integer, sa.ForeignKey("transactions.id"), nullable=False),
-                    sa.Column('created', sa.DateTime, server_default=sa.func.current_timestamp()),
-                    sa.Column('updated', sa.DateTime, server_default=sa.func.current_timestamp(),
-                              server_onupdate=sa.func.current_timestamp()),
+                    sa.Column('created', sa.DateTime, nullable=False),
+                    sa.Column('updated', sa.DateTime, nullable=False),
                     sa.Column('origin', sa.String, nullable=False),
                     sa.Column('destination', sa.String, nullable=False),
-                    sa.Column('amount', sa.Numeric(25, 18), server_default='0.0'),
+                    sa.Column('amount', sa.Numeric(25, 18), nullable=False),
                     sa.Column('coin', sa.String, nullable=False),
-                    sa.Column('status', sa.String),
+                    sa.Column('status', sa.String, nullable=False),
                     sa.Column('error', sa.String))
 
 

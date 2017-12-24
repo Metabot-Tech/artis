@@ -1,9 +1,10 @@
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, DateTime, String, Enum, Numeric, ForeignKey
-from models.database.status import Status
-from models.database.markets import Markets
-from models.database.coins import Coins
-from models.database.transaction import Transaction
+from sqlalchemy.ext.declarative import declarative_base
+
+from database.models.coins import Coins
+from database.models.markets import Markets
+from database.models.status import Status
+from database.models.transaction import Transaction
 
 Base = declarative_base()
 

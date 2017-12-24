@@ -1,6 +1,7 @@
 from marshmallow import Schema, fields, post_load
-from schemas.Liqui.ApiKeyRightsSchema import ApiKeyRightsSchema
-from models.Liqui.Account import Account
+
+from network.models.Liqui.Account import Account
+from network.schemas.Liqui import ApiKeyRightsSchema
 
 
 class AccountSchema(Schema):
