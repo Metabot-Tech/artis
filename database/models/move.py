@@ -1,19 +1,17 @@
 from sqlalchemy import Column, Integer, DateTime, String, Enum, Numeric, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
-
+from sqlalchemy.orm import relationship
 from database.models.coins import Coins
 from database.models.markets import Markets
 from database.models.status import Status
-from database.models.transaction import Transaction
-
-Base = declarative_base()
+from database.database import Base
 
 
 class Move(Base):
     __tablename__ = 'moves'
 
     id = Column(Integer, primary_key=True)
-    transaction = Column(Integer, ForeignKey(Transaction.id)),
+    #transaction_id = Column(Integer, ForeignKey(Transaction.id)),
+    #transaction = relationship(Transaction, backref='moves')
     created = Column(DateTime)
     updated = Column(DateTime)
     origin = Column(Enum(Markets))

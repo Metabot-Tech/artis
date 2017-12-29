@@ -1,38 +1,30 @@
 from database.models.transaction import Transaction
-import database.database as db
+from database.database import Session
 
 
 def create_transaction():
-    return update_transaction(Transaction())
+    return upsert_transaction(Transaction())
 
 
-def update_transaction(transaction):
-    session = db.session()
-
-    try:
-        session.add(transaction)
-        session.commit()
-        session.refresh(transaction)
-    except:
-        session.rollback()
-        raise
-    finally:
-        session.close()
-
-    return transaction
+def upsert_transaction(transaction):
+    return _upsert_data(transaction)
 
 
 def upsert_trade(trade):
-    session = db.session()
+    return _upsert_data(trade)
+
+
+def _upsert_data(data):
+    session = Session()
 
     try:
-        session.add(trade)
+        session.add(data)
         session.commit()
-        session.refresh(trade)
+        session.refresh(data)
     except:
         session.rollback()
         raise
     finally:
         session.close()
 
-    return trade
+    return data

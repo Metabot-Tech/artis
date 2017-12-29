@@ -1,5 +1,6 @@
 import logging
 import time
+import ccxt
 from dynaconf import settings
 from liqui import Liqui
 from binance.client import Client
@@ -9,10 +10,28 @@ logger = logging.getLogger(__name__)
 
 class Trader(object):
     _sleep_time = 5
+    _pair = "{}/ETH"
+    _LIMIT = "limit"
 
     def __init__(self):
         self.liqui = Liqui(settings.LIQUI.API_KEY, settings.LIQUI.API_SECRET)
         self.binance = Client(settings.BINANCE.API_KEY, settings.BINANCE.API_SECRET)
+        self.markets = {
+            'LIQUI': ccxt.liqui({
+                'apiKey': settings.LIQUI.API_KEY,
+                'secret': settings.LIQUI.API_SECRET
+            }),
+            'BINANCE': ccxt.binance({
+                'apiKey': settings.BINANCE.API_KEY,
+                'secret': settings.BINANCE.API_SECRET
+            })
+        }
+
+    def buy(self, market, coin, volume, rate):
+        return self.markets.get(market).create_order(self._pair.format(coin), self._LIMIT, 'buy', volume, rate)
+
+    def sell(self, market, coin, volume, rate):
+        return self.markets.get(market).create_order(self._pair.format(coin), self._LIMIT, 'sell', volume, rate)
 
     def buy_coin(self, coin, market, amount, price):
         # Temporary origin market checking until abstracted

@@ -12,13 +12,3 @@ Engine = create_engine(settings.DATABASE_URL.format(os.environ['POSTGRES_USER'],
 
 Session = sessionmaker()
 Session.configure(bind=Engine)
-
-Base.metadata.create_all(Engine)
-
-
-def session():
-    return Session()
-
-
-def get_engine():
-    return Engine

@@ -1,9 +1,7 @@
-from sqlalchemy import Column, Integer, DateTime, String, Enum, Numeric
-from sqlalchemy.ext.declarative import declarative_base
-from database.models.status import Status
 import datetime
-
-Base = declarative_base()
+from sqlalchemy import Column, Integer, DateTime, String, Enum, Numeric
+from database.models.status import Status
+from database.database import Base
 
 
 class Transaction(Base):

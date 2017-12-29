@@ -19,7 +19,8 @@ depends_on = 'd5d9b1f37711'
 def upgrade():
     op.create_table('trades',
                     sa.Column('id', sa.Integer, primary_key=True),
-                    sa.Column('transaction', sa.Integer, sa.ForeignKey("transactions.id"), nullable=False),
+                    sa.Column('transaction_id', sa.Integer, sa.ForeignKey("transactions.id"), nullable=False),
+                    sa.Column("order_id", sa.Integer),
                     sa.Column('created', sa.DateTime, nullable=False),
                     sa.Column('updated', sa.DateTime, nullable=False),
                     sa.Column('market', sa.String, nullable=False),
