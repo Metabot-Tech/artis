@@ -1,4 +1,5 @@
 import logging
+import asyncio
 import ccxt.async as ccxt
 from liqui import Liqui
 from binance.client import Client
@@ -79,4 +80,5 @@ class Analyser(object):
     async def get_latest_depth(self, market, coin, params={}):
         return await self.markets.get(market).fetch_order_book(self._pair.format(coin), params=params)
 
-
+    async def get_balance(self, market, params={}):
+        return await self.markets.get(market).fetch_balance(params=params)

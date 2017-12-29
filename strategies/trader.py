@@ -27,11 +27,25 @@ class Trader(object):
             })
         }
 
+        # Init markets
+        for key, value in self.markets.items():
+            value.load_markets()
+
     def buy(self, market, coin, volume, rate):
-        return self.markets.get(market).create_order(self._pair.format(coin), self._LIMIT, 'buy', volume, rate)
+        symbol = self._pair.format(coin)
+
+        if market == "BINANCE":
+            volume = self.markets.get(market).amount_to_lots(symbol, volume)
+
+        return self.markets.get(market).create_order(symbol, self._LIMIT, 'buy', volume, rate)
 
     def sell(self, market, coin, volume, rate):
-        return self.markets.get(market).create_order(self._pair.format(coin), self._LIMIT, 'sell', volume, rate)
+        symbol = self._pair.format(coin)
+
+        if market == "BINANCE":
+            volume = self.markets.get(market).amount_to_lots(symbol, volume)
+
+        return self.markets.get(market).create_order(symbol, self._LIMIT, 'sell', volume, rate)
 
     def buy_coin(self, coin, market, amount, price):
         # Temporary origin market checking until abstracted

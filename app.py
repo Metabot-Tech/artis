@@ -1,10 +1,23 @@
 import logging
 import sys
+import datetime
 from strategies.balance import Balance
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, format='%(asctime)s %(name)-40s %(levelname)-8s %(message)s')
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+logFormatter = logging.Formatter("%(asctime)s %(name)-40s %(levelname)-8s %(message)s")
+rootLogger = logging.getLogger()
+rootLogger.setLevel(logging.DEBUG)
+
+fileHandler = logging.FileHandler("logs/logging-{}.log".format(datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")))
+fileHandler.setFormatter(logFormatter)
+rootLogger.addHandler(fileHandler)
+
+consoleHandler = logging.StreamHandler(stream=sys.stdout)
+consoleHandler.setFormatter(logFormatter)
+rootLogger.addHandler(consoleHandler)
+
 logger = logging.getLogger(__name__)
 
 
