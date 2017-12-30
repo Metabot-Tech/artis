@@ -21,7 +21,6 @@ def upgrade():
                     sa.Column('id', sa.Integer, primary_key=True),
                     sa.Column('created', sa.DateTime, nullable=False),
                     sa.Column('updated', sa.DateTime, nullable=False),
-                    sa.Column('profit', sa.Numeric(25, 18), nullable=False),
                     sa.Column('status', sa.String, nullable=False),
                     sa.Column('error', sa.String))
 

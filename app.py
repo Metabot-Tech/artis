@@ -5,6 +5,7 @@ from strategies.balance import Balance
 
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("asyncio").setLevel(logging.WARNING)
 
 logFormatter = logging.Formatter("%(asctime)s %(name)-40s %(levelname)-8s %(message)s")
 rootLogger = logging.getLogger()

@@ -24,10 +24,10 @@ def upgrade():
                     sa.Column('created', sa.DateTime, nullable=False),
                     sa.Column('updated', sa.DateTime, nullable=False),
                     sa.Column('market', sa.String, nullable=False),
-                    sa.Column('sell_amount', sa.Numeric(25, 18), nullable=False),
-                    sa.Column('sell_coin', sa.String, nullable=False),
-                    sa.Column('buy_amount', sa.Numeric(25, 18), nullable=False),
-                    sa.Column('buy_coin', sa.String, nullable=False),
+                    sa.Column('type', sa.String, nullable=False),
+                    sa.Column('coin', sa.String, nullable=False),
+                    sa.Column('amount', sa.Numeric(25, 18), nullable=False),
+                    sa.Column('price', sa.Numeric(25, 18), nullable=False),
                     sa.Column('status', sa.String, nullable=False),
                     sa.Column('error', sa.String))
 

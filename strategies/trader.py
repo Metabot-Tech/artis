@@ -33,19 +33,17 @@ class Trader(object):
 
     def buy(self, market, coin, volume, rate):
         symbol = self._pair.format(coin)
-
-        if market == "BINANCE":
-            volume = self.markets.get(market).amount_to_lots(symbol, volume)
-
+        volume = self.markets.get(market).amount_to_lots(symbol, volume)
         return self.markets.get(market).create_order(symbol, self._LIMIT, 'buy', volume, rate)
 
     def sell(self, market, coin, volume, rate):
         symbol = self._pair.format(coin)
-
-        if market == "BINANCE":
-            volume = self.markets.get(market).amount_to_lots(symbol, volume)
-
+        volume = self.markets.get(market).amount_to_lots(symbol, volume)
         return self.markets.get(market).create_order(symbol, self._LIMIT, 'sell', volume, rate)
+
+    def cancel_order(self, market, coin, order_id):
+        symbol = self._pair.format(coin)
+        return self.markets.get(market).cancel_order(order_id, symbol)
 
     def buy_coin(self, coin, market, amount, price):
         # Temporary origin market checking until abstracted
@@ -76,9 +74,6 @@ class Trader(object):
 
         logger.info("Selling {} {} at {} on {}. ID: {}".format(amount, coin, price, market, order_id))
         return order_id
-
-    def cancel_order(self, order_id, market):
-        pass
 
     def wait_for_order(self, order_id, market, timeout=300):
         completed = False

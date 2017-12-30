@@ -6,22 +6,27 @@ logger = logging.getLogger(__name__)
 
 
 class Reporter(object):
-    def __init__(self):
+    def __init__(self, logger):
         self.slack = Slacker(settings.SLACK.TOKEN)
+        self.logger = logger
 
     def info(self, message):
-        self._post("[INFO] {}".format(message))
+        self.logger.info(message)
+        self._post(message, {"color": "good", "message": "INFO"})
 
     def warning(self, message):
-        self._post("[WARNING] {}".format(message))
+        self.logger.warning(message)
+        self._post(message, {"color": "warning", "message": "WARNING"})
 
     def error(self, message):
-        self._post("[ERROR] {}".format(message))
+        self.logger.error(message)
+        self._post("<!here> {}".format(message), {"color": "danger", "text": "ERROR"})
 
-    def _post(self, message):
+    def _post(self, message, attachment):
         try:
             self.slack.chat.post_message(channel=settings.SLACK.CHANNEL,
                                          text=message,
-                                         username="Artis")
+                                         username="Artis",
+                                         attachments=[attachment])
         except:
             logger.error("Failed to post to slack")

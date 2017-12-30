@@ -82,3 +82,35 @@ class Analyser(object):
 
     async def get_balance(self, market, params={}):
         return await self.markets.get(market).fetch_balance(params=params)
+
+    def is_filled(self, order, market):
+        # TODO: Refactor to add markets more easily
+        if market == "LIQUI":
+            if order.get("info").get("return").get("order_id") is 0:
+                return True
+        elif market == "BINANCE":
+            if order.get("info").get("status") == "FILLED":
+                return True
+        else:
+            logger.error("Cannot extract status for market {}".format(market))
+        return False
+
+    def extract_amount(self, order, market):
+        # TODO: Refactor to add markets more easily
+        if market == "LIQUI":
+            return order.get("info").get("return").get("received")
+        elif market == "BINANCE":
+            return float(order.get("info").get("executedQty"))
+        else:
+            logger.error("Cannot extract status for market {}".format(market))
+        return 0
+
+    def extract_price(self, order, market):
+        # TODO: Refactor to add markets more easily
+        if market == "LIQUI":
+            return order.get("price")
+        elif market == "BINANCE":
+            return float(order.get("info").get("price"))
+        else:
+            logger.error("Cannot extract status for market {}".format(market))
+        return 0

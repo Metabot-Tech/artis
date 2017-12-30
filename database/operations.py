@@ -13,6 +13,8 @@ def upsert_transaction(transaction):
 def upsert_trade(trade):
     return _upsert_data(trade)
 
+def upsert_balance(balance):
+    return _upsert_data(balance)
 
 def _upsert_data(data):
     session = Session()

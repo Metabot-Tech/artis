@@ -10,8 +10,7 @@ class Transaction(Base):
     id = Column(Integer, primary_key=True)
     created = Column(DateTime, default=datetime.datetime.now)
     updated = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-    profit = Column(Numeric(25, 18), default=0)
-    status = Column(Enum(Status), default=Status.CREATED)
+    status = Column(Enum(Status), default=Status.DONE)
     error = Column(String)
 
     def __repr__(self):
