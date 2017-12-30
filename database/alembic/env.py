@@ -22,7 +22,7 @@ target_metadata = None
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
-config.set_main_option('sqlalchemy.url', f"postgresql://{os.environ['POSTGRES_USER']}:{os.environ['POSTGRES_PASSWORD']}@localhost/{os.environ['POSTGRES_USER']}")
+config.set_main_option('sqlalchemy.url', f"postgresql://{os.environ['POSTGRES_USER']}:{os.environ['POSTGRES_PASSWORD']}@database/{os.environ['POSTGRES_USER']}")
 
 
 def run_migrations_offline():

@@ -45,6 +45,10 @@ class Trader(object):
         symbol = self._pair.format(coin)
         return self.markets.get(market).cancel_order(order_id, symbol)
 
+    def fetch_order(self, market, coin, order_id):
+        symbol = self._pair.format(coin)
+        return self.markets.get(market).fetch_order(order_id, symbol)
+
     def buy_coin(self, coin, market, amount, price):
         # Temporary origin market checking until abstracted
         if market == "LIQUI":

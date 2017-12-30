@@ -7,5 +7,3 @@ __pycache__/
 # Settings
 settings.yml
 .env
-
-logs/logging*
