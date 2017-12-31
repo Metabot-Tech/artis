@@ -21,6 +21,7 @@ class CoinAnalysis(object):
 class Analyser(object):
     _pair = "{}/ETH"
     _LIMIT = "limit"
+    _minimum_order = 0.01 # In ETH
 
     def __init__(self):
         self.liqui = Liqui(settings.LIQUI.API_KEY, settings.LIQUI.API_SECRET)
@@ -105,6 +106,18 @@ class Analyser(object):
             logger.error("Cannot extract status for market {}".format(market))
         return 0
 
+    def extract_remaining_amount(self, order, market):
+        # TODO: Refactor to add markets more easily
+        if market == "LIQUI":
+            return order.get("info").get("return").get("remains")
+        elif market == "BINANCE":
+            price = float(order.get("info").get("origQty")) - float(order.get("info").get("executedQty"))
+            logger.debug(price)
+            return price
+        else:
+            logger.error("Cannot extract status for market {}".format(market))
+        return 0
+
     def extract_price(self, order, market):
         # TODO: Refactor to add markets more easily
         if market == "LIQUI":
@@ -114,3 +127,10 @@ class Analyser(object):
         else:
             logger.error("Cannot extract status for market {}".format(market))
         return 0
+
+    def extract_good_order(self, orders):
+        for order in orders:
+            if order[0]*order[1] > self._minimum_order:
+                return order
+        logger.error("No good order found, returning first one")
+        return orders[0]

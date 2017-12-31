@@ -111,7 +111,7 @@ class Balance(object):
             order = self.trader.buy(analysis.buy, self.coin, volumes_wanted.get('buy'), asks.get(analysis.buy)[0])
         except:
             logger.error("Failed to buy {} on {}".format(self.coin, analysis.buy))
-            return False, {}
+            return False, None
 
         logger.debug(order)
 
@@ -130,43 +130,45 @@ class Balance(object):
         for i in range(self._sell_timeout):
             order = self.trader.fetch_order(analysis.sell, self.coin, order.get("id"))
             if self.analyser.is_filled(order, analysis.sell):
-                return True
+                return True, order, None
             time.sleep(1)
 
         # If not sold, cancel order
         self.reporter.warning("Trade miss when selling {} on {}. Cancelling order: {}".format(self.coin,
                                                                                               analysis.sell,
                                                                                               order.get("id")))
-
         cancellation = self.trader.cancel_order(analysis.sell, self.coin, order.get("id"))
         logger.debug(cancellation)
 
         # Create new order at market price
         try:
+            new_price = asks.get(analysis.sell)[0]*self._sell_miss_percentage
+            logger.debug(new_price)
             new_order = self.trader.sell(analysis.sell, self.coin, self.analyser.extract_amount(order, analysis.sell),
                                          asks.get(analysis.sell)[0]*self._sell_miss_percentage)
         except:
-            self.reporter.error("Failed to sell {} on {}, stopping".format(self.coin, analysis.buy))
-            return False, {}
+            self.reporter.error("Failed to sell {} on {}, stopping".format(self.coin, analysis.sell))
+            logger.exception("")
+            return False, None, order
 
         logger.debug(new_order)
 
-        return True, new_order
+        return True, new_order, order
 
     def _sell(self, analysis, volumes_wanted, bids, asks):
         try:
             order = self.trader.sell(analysis.sell, self.coin, volumes_wanted.get('sell'),
                                      bids.get(analysis.sell)[0])
         except:
-            self.reporter.error("Failed to sell {} on {}, stopping".format(self.coin, analysis.buy))
-            return False, {}
+            self.reporter.error("Failed to sell {} on {}, stopping".format(self.coin, analysis.sell))
+            return False, None, None
 
         logger.debug(order)
 
         if not self.analyser.is_filled(order, analysis.sell):
             return self._handle_miss_sell(order, analysis, asks)
 
-        return True, order
+        return True, order, None
 
     def run(self):
         logger.debug("Starting balance strategy of {}".format(self.coin))
@@ -177,12 +179,13 @@ class Balance(object):
         pending_sells = 0
 
         while self.running:
-            logger.info("Balance started for coin {}".format(self.coin))
+            #logger.info("Balance started for coin {}".format(self.coin))
 
             # Update balance
             if update_balance:
                 if self._update_balance(transaction):
                     update_balance = False
+                    transaction = None
 
             # Get latest prices
             try:
@@ -194,8 +197,8 @@ class Balance(object):
                 continue
 
             # Analyse best offer
-            asks = dict(zip(self.markets, [depth.get(i).get("asks")[0] for i in self.markets]))
-            bids = dict(zip(self.markets, [depth.get(i).get("bids")[0] for i in self.markets]))
+            asks = dict(zip(self.markets, [self.analyser.extract_good_order(depth.get(i).get("asks")) for i in self.markets]))
+            bids = dict(zip(self.markets, [self.analyser.extract_good_order(depth.get(i).get("bids")) for i in self.markets]))
 
             analyses = [
                 Analysis(self.markets[0], self.markets[1], bids.get(self.markets[1])[0]/asks.get(self.markets[0])[0]),
@@ -204,7 +207,7 @@ class Balance(object):
 
             # Perform balance
             for analysis in analyses:
-                logger.debug("Exposure: {}".format(analysis.exposure))
+                #logger.debug("Exposure: {}".format(analysis.exposure))
 
                 # Check profit
                 if analysis.exposure < settings.PROFIT_FACTOR:
@@ -222,22 +225,26 @@ class Balance(object):
                 }
 
                 if volumes.get('ask') < volumes_wanted.get('buy'):
-                    logger.warning("Ask is not big enough, skipping")
-                    continue
+                    volumes_wanted['buy'] = volumes.get('ask')
+                    volumes_wanted['sell'] = volumes.get('ask')/analysis.exposure
+                    logger.warning("Ask too small, reducing sell to {} and buy to {}".format(volumes_wanted['sell'],
+                                                                                             volumes_wanted['buy']))
 
                 if volumes.get('bid') < volumes_wanted.get('sell'):
-                    logger.warning("Bid if not big enough, skipping")
-                    continue
+                    volumes_wanted['buy'] = volumes.get('bid') * analysis.exposure
+                    volumes_wanted['sell'] = volumes.get('bid')
+                    logger.warning("Bid too small, reducing sell to {} and buy to {}".format(volumes_wanted['sell'],
+                                                                                             volumes_wanted['buy']))
 
                 # Check wallet amount
                 if self.balance_coin.get(analysis.sell) < volumes_wanted.get('sell'):
-                    self.reporter.error("Cannot sell, empty {} wallet on {}".format(self.coin, analysis.sell))
+                    self.reporter.error("Cannot sell, empty {} wallet on {}".format(self.coin, analysis.sell), 3600)
                     time.sleep(60)
                     update_balance = True
                     continue
 
                 if self.balance_eth.get(analysis.buy) < settings.AMOUNT_TO_TRADE:
-                    self.reporter.error("Cannot buy, empty ETH wallet on {}".format(analysis.buy))
+                    self.reporter.error("Cannot buy, empty ETH wallet on {}".format(analysis.buy), 3600)
                     time.sleep(60)
                     update_balance = True
                     continue
@@ -255,13 +262,14 @@ class Balance(object):
                 logger.info("Successfully performed buy order: {}".format(buy_order.get("id")))
 
                 # Sell
-                sell_done, sell_order = self._sell(analysis, volumes_wanted, bids, asks)
+                sell_done, sell_order, cancelled_sell_order = self._sell(analysis, volumes_wanted, bids, asks)
                 if not sell_done:
+                    # TODO: Should not exit here, should at least save the state
                     logger.error("Currently not handling bad sell, stopping")
                     sys.exit(1)
                 logger.info("Successfully performed sell order: {}".format(sell_order.get("id")))
 
-                # Store information in database
+                # Store buy information in database
                 transaction = db.create_transaction()
                 buy_trade = Trade(transaction,
                                   analysis.buy,
@@ -273,11 +281,24 @@ class Balance(object):
                                   Status.DONE)
                 db.upsert_trade(buy_trade)
 
+                # Store sell information in database
                 if self.analyser.is_filled(sell_order, analysis.sell):
                     sell_status = Status.DONE
                 else:
                     sell_status = Status.ONGOING
                     pending_sells += 1
+
+                if cancelled_sell_order is not None:
+                    cancelled_sell_trade = Trade(transaction,
+                                                 analysis.sell,
+                                                 Types.SELL,
+                                                 self.coin,
+                                                 self.analyser.extract_amount(sell_order, analysis.sell),
+                                                 self.analyser.extract_price(sell_order, analysis.sell),
+                                                 sell_order.get("id"),
+                                                 Status.CANCELLED)
+                    db.upsert_trade(cancelled_sell_trade)
+
                 sell_trade = Trade(transaction,
                                    analysis.sell,
                                    Types.SELL,
@@ -291,7 +312,7 @@ class Balance(object):
                 update_balance = True
                 break
 
-            logger.info("Balance done for coin {}".format(self.coin))
+            #logger.info("Balance done for coin {}".format(self.coin))
 
             # Sleep
             time.sleep(1)
