@@ -142,7 +142,7 @@ class Balance(object):
         try:
             new_price = asks.get(analysis.sell)[0]*self._sell_miss_percentage
             logger.debug(new_price)
-            new_order = self.trader.sell(analysis.sell, self.coin, self.analyser.extract_amount(order, analysis.sell),
+            new_order = self.trader.sell(analysis.sell, self.coin, self.analyser.extract_remaining_amount(order, analysis.sell),
                                          asks.get(analysis.sell)[0]*self._sell_miss_percentage)
         except:
             self.reporter.error("Failed to sell {} on {}, stopping".format(self.coin, analysis.sell))
