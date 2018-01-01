@@ -75,8 +75,6 @@ class Balance(object):
             logger.exception("An error occurred when trying to fetch the balance")
             return False
 
-        logger.debug(balance)
-
         # Store in database
         for market in self.markets:
             # Update values
