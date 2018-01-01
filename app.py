@@ -1,7 +1,11 @@
 import logging
 import sys
 import datetime
+from database.database import Database
 from strategies.balance import Balance
+from strategies.trader import Trader
+from strategies.analyser import Analyser
+from strategies.reporter import Reporter
 
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
@@ -24,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 def main():
     logger.debug("Creating strategy")
-    strategy = Balance("TRX", "LIQUI", "BINANCE")
+    strategy = Balance("TRX", "LIQUI", "BINANCE", Trader(), Analyser(), Reporter(), Database())
 
     logger.info("Start running current strategy")
     strategy.run()

@@ -1,7 +1,7 @@
 import datetime
 from sqlalchemy import Column, Integer, DateTime, String, Enum, Numeric
 from database.models.status import Status
-from database.database import Base
+from database.models.base import Base
 
 
 class Transaction(Base):

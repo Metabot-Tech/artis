@@ -5,7 +5,7 @@ from database.models.coins import Coins
 from database.models.markets import Markets
 from database.models.status import Status
 from database.models.types import Types
-from database.database import Base
+from database.models.base import Base
 
 
 class Trade(Base):

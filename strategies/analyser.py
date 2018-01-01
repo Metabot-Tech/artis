@@ -1,5 +1,4 @@
 import logging
-import asyncio
 import ccxt.async as ccxt
 from liqui import Liqui
 from binance.client import Client
@@ -21,7 +20,7 @@ class CoinAnalysis(object):
 class Analyser(object):
     _pair = "{}/ETH"
     _LIMIT = "limit"
-    _minimum_order = 0.01 # In ETH
+    _minimum_order = 0.015  # In ETH
 
     def __init__(self):
         self.liqui = Liqui(settings.LIQUI.API_KEY, settings.LIQUI.API_SECRET)
@@ -85,9 +84,37 @@ class Analyser(object):
         return await self.markets.get(market).fetch_balance(params=params)
 
     def is_filled(self, order, market):
+        """
+        Use this method when parsing the result of a buy/sell
+
+        :param order:
+        :param market:
+        :return:
+        """
+
         # TODO: Refactor to add markets more easily
         if market == "LIQUI":
-            if order.get("info").get("return").get("order_id") is 0:
+            if order.get("info").get("return").get("order_id") == 0:
+                return True
+        elif market == "BINANCE":
+            if order.get("info").get("status") == "FILLED":
+                return True
+        else:
+            logger.error("Cannot extract status for market {}".format(market))
+        return False
+
+    def is_order_filled(self, order, order_id, market):
+        """
+        Use this method when parsing the result of an order fetch
+
+        :param order:
+        :param order_id:
+        :param market:
+        :return:
+        """
+        # TODO: Refactor to add markets more easily
+        if market == "LIQUI":
+            if order.get("info").get("return").get(str(order_id)).get("status") == 1:
                 return True
         elif market == "BINANCE":
             if order.get("info").get("status") == "FILLED":

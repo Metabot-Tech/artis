@@ -2,16 +2,12 @@ import logging
 import time
 import sys
 import asyncio
-import database.operations as db
 from database.models.trade import Trade
 from database.models.balance import Balance as BalanceModel
 from database.models.types import Types
 from database.models.status import Status
 from database.models.coins import Coins
 from dynaconf import settings
-from strategies.trader import Trader
-from strategies.analyser import Analyser
-from strategies.reporter import Reporter
 
 logger = logging.getLogger(__name__)
 
@@ -28,10 +24,12 @@ class Balance(object):
     _sell_timeout = 5
     _sell_miss_percentage = 0.995
 
-    def __init__(self, coin, market1, market2):
-        self.trader = Trader()
-        self.analyser = Analyser()
-        self.reporter = Reporter(logger)
+    def __init__(self, coin, market1, market2, trader, analyser, reporter, database):
+        self.trader = trader
+        self.analyser = analyser
+        self.reporter = reporter
+        self.reporter.logger = logger
+        self.db = database
         self.coin = coin
         self.markets = [market1, market2]
         self.running = True
@@ -40,21 +38,21 @@ class Balance(object):
         self.opened_orders = 0
 
         # Fill database with base balance if empty
-        if db.count_transactions() == 0:
-            transaction = db.create_transaction()
+        if self.db.count_transactions() == 0:
+            transaction = self.db.create_transaction()
             self._update_balance(transaction)
 
         self._update_pending_sells()
 
     def _update_pending_sells(self):
-        sells = db.fetch_pending_sells()
+        sells = self.db.fetch_pending_sells()
         pending_sells = len(sells)
         for sell in sells:
             order = self.trader.fetch_order(sell.market.name, sell.coin.name, sell.order_id)
             if self.analyser.is_filled(order, sell.market.name):
                 pending_sells -= 1
                 sell.status = Status.DONE
-                db.upsert_trade(sell)
+                self.db.upsert_trade(sell)
 
         logger.debug("Pending sells remaining: {}".format(pending_sells))
 
@@ -77,6 +75,8 @@ class Balance(object):
             logger.exception("An error occurred when trying to fetch the balance")
             return False
 
+        logger.debug(balance)
+
         # Store in database
         for market in self.markets:
             # Update values
@@ -86,9 +86,9 @@ class Balance(object):
             # Update database
             if transaction is not None:
                 balance_eth = BalanceModel(transaction, market, Coins.ETH, self.balance_eth.get(market))
-                db.upsert_balance(balance_eth)
+                self.db.upsert_balance(balance_eth)
                 balance_coin = BalanceModel(transaction, market, Coins[self.coin], self.balance_coin.get(market))
-                db.upsert_balance(balance_coin)
+                self.db.upsert_balance(balance_coin)
 
         logger.debug("Total ETH: {}".format(sum([self.balance_eth.get(i) for i in self.markets])))
         logger.debug("Total {}: {}".format(self.coin, sum([self.balance_coin.get(i) for i in self.markets])))
@@ -128,8 +128,8 @@ class Balance(object):
     def _handle_miss_sell(self, order, analysis, asks):
         # Check each second if sold until timeout
         for i in range(self._sell_timeout):
-            order = self.trader.fetch_order(analysis.sell, self.coin, order.get("id"))
-            if self.analyser.is_filled(order, analysis.sell):
+            fetched_order = self.trader.fetch_order(analysis.sell, self.coin, order.get("id"))
+            if self.analyser.is_order_filled(fetched_order, order.get("id"), analysis.sell):
                 return True, order, None
             time.sleep(1)
 
@@ -243,7 +243,7 @@ class Balance(object):
                     update_balance = True
                     continue
 
-                if self.balance_eth.get(analysis.buy) < settings.AMOUNT_TO_TRADE:
+                if self.balance_eth.get(analysis.buy) < volumes_wanted.get('buy')*asks.get(analysis.buy)[0]:
                     self.reporter.error("Cannot buy, empty ETH wallet on {}".format(analysis.buy), 3600)
                     time.sleep(60)
                     update_balance = True
@@ -270,7 +270,7 @@ class Balance(object):
                 logger.info("Successfully performed sell order: {}".format(sell_order.get("id")))
 
                 # Store buy information in database
-                transaction = db.create_transaction()
+                transaction = self.db.create_transaction()
                 buy_trade = Trade(transaction,
                                   analysis.buy,
                                   Types.BUY,
@@ -279,7 +279,7 @@ class Balance(object):
                                   self.analyser.extract_price(buy_order, analysis.buy),
                                   buy_order.get("id"),
                                   Status.DONE)
-                db.upsert_trade(buy_trade)
+                self.db.upsert_trade(buy_trade)
 
                 # Store sell information in database
                 if self.analyser.is_filled(sell_order, analysis.sell):
@@ -297,7 +297,7 @@ class Balance(object):
                                                  self.analyser.extract_price(sell_order, analysis.sell),
                                                  sell_order.get("id"),
                                                  Status.CANCELLED)
-                    db.upsert_trade(cancelled_sell_trade)
+                    self.db.upsert_trade(cancelled_sell_trade)
 
                 sell_trade = Trade(transaction,
                                    analysis.sell,
@@ -307,7 +307,7 @@ class Balance(object):
                                    self.analyser.extract_price(sell_order, analysis.sell),
                                    sell_order.get("id"),
                                    sell_status)
-                db.upsert_trade(sell_trade)
+                self.db.upsert_trade(sell_trade)
 
                 update_balance = True
                 break

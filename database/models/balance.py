@@ -3,7 +3,7 @@ from sqlalchemy import Column, Integer, DateTime, Enum, Numeric, ForeignKey
 from sqlalchemy.orm import relationship
 from database.models.coins import Coins
 from database.models.markets import Markets
-from database.database import Base
+from database.models.base import Base
 
 
 class Balance(Base):

@@ -14,22 +14,25 @@ class Cooldown(object):
 
 
 class Reporter(object):
-    def __init__(self, logger):
+    def __init__(self, logger=None):
         self.slack = Slacker(settings.SLACK.TOKEN)
         self.logger = logger
         self.cooldowns = []
 
-    def info(self, message, slackCooldown=0):
-        self.logger.info(message)
-        self._post(message, slackCooldown, {"color": "good", "text": "INFO"})
+    def info(self, message, slack_cooldown=0):
+        if self.logger is not None:
+            self.logger.info(message)
+        self._post(message, slack_cooldown, {"color": "good", "text": "INFO"})
 
-    def warning(self, message, slackCooldown=0):
-        self.logger.warning(message)
-        self._post(message, slackCooldown, {"color": "warning", "text": "WARNING"})
+    def warning(self, message, slack_cooldown=0):
+        if self.logger is not None:
+            self.logger.warning(message)
+        self._post(message, slack_cooldown, {"color": "warning", "text": "WARNING"})
 
-    def error(self, message, slackCooldown=0):
-        self.logger.error(message)
-        self._post("<!here> {}".format(message), slackCooldown, {"color": "danger", "text": "ERROR"})
+    def error(self, message, slack_cooldown=0):
+        if self.logger is not None:
+            self.logger.error(message)
+        self._post("<!here> {}".format(message), slack_cooldown, {"color": "danger", "text": "ERROR"})
 
     def _can_trigger(self, message):
         for cooldown in reversed(self.cooldowns):
@@ -51,7 +54,6 @@ class Reporter(object):
         try:
             self.slack.chat.post_message(channel=settings.SLACK.CHANNEL,
                                          text=message,
-                                         username="Artis",
                                          attachments=[attachment])
         except:
             logger.error("Failed to post to slack")
