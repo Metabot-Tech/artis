@@ -114,7 +114,10 @@ class Balance(object):
         logger.debug(order)
 
         if not self.analyser.is_filled(order, analysis.buy):
-            cancellation = self.trader.cancel_order(analysis.buy, self.coin, order.get("id"))
+            try:
+                cancellation = self.trader.cancel_order(analysis.buy, self.coin, order.get("id"))
+            except:
+                self.reporter.error("FIX ME PLEASE: {} on {}".format(order.get("id"), analysis.buy))
             logger.debug(cancellation)
             self.reporter.warning("Trade miss when buying {} on {}. Cancelling order: {}".format(self.coin,
                                                                                                  analysis.buy,
