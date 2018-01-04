@@ -1,6 +1,6 @@
 import itertools
 import logging
-import strategies.helpers as helpers
+import strategies.helper as helpers
 import database.operations as db
 from database.models.trade import Trade
 from database.models.coins import Coins

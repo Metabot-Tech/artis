@@ -2,6 +2,8 @@ import logging
 import ccxt.async as ccxt
 from liqui import Liqui
 from binance.client import Client
+from database.models.types import Types
+from database.models.status import Status
 from dynaconf import settings
 
 logger = logging.getLogger(__name__)
@@ -142,7 +144,17 @@ class Analyser(object):
             logger.debug(price)
             return price
         else:
-            logger.error("Cannot extract status for market {}".format(market))
+            logger.error("Cannot remaining amount for market {}".format(market))
+        return 0
+
+    def extract_order_executed_amount(self, order, order_id, market):
+        # TODO: Refactor to add markets more easily
+        if market == "LIQUI":
+            return order.get("info").get("return").get(str(order_id)).get("amount")
+        elif market == "BINANCE":
+            return float(order.get("info").get("executedQty"))
+        else:
+            logger.error("Cannot executed amount for market {}".format(market))
         return 0
 
     def extract_price(self, order, market):
@@ -154,6 +166,87 @@ class Analyser(object):
         else:
             logger.error("Cannot extract status for market {}".format(market))
         return 0
+
+    @staticmethod
+    def extract_type(order, market):
+        if market == "LIQUI":
+            return Types[order.get("side").upper()]
+        elif market == "BINANCE":
+            return Types[order.get("info").get("side")]
+        else:
+            logger.error("Cannot extract type for market {}".format(market))
+        return Types.UNKNOWN
+
+    @staticmethod
+    def extract_start_amount(order, market):
+        if market == "LIQUI":
+            return order.get("amount")
+        elif market == "BINANCE":
+            return float(order.get("info").get("origQty"))
+        else:
+            logger.error("Cannot extract start amount for market {}".format(market))
+        return 0
+
+    @staticmethod
+    def extract_remaining_amount2(order, market):
+        if market == "LIQUI":
+            return order.get("info").get("return").get("remains")
+        elif market == "BINANCE":
+            return float(order.get("info").get("origQty")) - float(order.get("info").get("executedQty"))
+        else:
+            logger.error("Cannot extract remaining amount for market {}".format(market))
+        return 0
+
+    @staticmethod
+    def extract_remaining_amount_order(order, market):
+        if market == "LIQUI":
+            return order.get("info").get("amount")
+        elif market == "BINANCE":
+            return float(order.get("info").get("origQty")) - float(order.get("info").get("executedQty"))
+        else:
+            logger.error("Cannot extract remaining amount for market {} (order)".format(market))
+        return 0
+
+    @staticmethod
+    def extract_price2(order, market):
+        if market == "LIQUI":
+            return order.get("price")
+        elif market == "BINANCE":
+            return float(order.get("info").get("price"))
+        else:
+            logger.error("Cannot extract price for market {}".format(market))
+        return 0
+
+    @staticmethod
+    def extract_status(order, market):
+        if market == "LIQUI":
+            if order.get("info").get("return").get("order_id") == 0:
+                return Status.DONE
+            else:
+                return Status.ONGOING
+        elif market == "BINANCE":
+            if order.get("info").get("status") == "FILLED":
+                return Status.DONE
+            else:
+                return Status.ONGOING
+        else:
+            logger.error("Cannot extract status for market {}".format(market))
+        return Status.UNKNOWN
+
+    @staticmethod
+    def extract_status_order(order, market):
+        if market == "LIQUI":
+            return {0: Status.ONGOING,
+                    1: Status.DONE,
+                    2: Status.CANCELLED,
+                    3: Status.CANCELLED}[order.get("info").get("status")]
+        elif market == "BINANCE":
+            return {'NEW': Status.ONGOING,
+                    'FILLED': Status.DONE,
+                    'CANCELED': Status.CANCELLED}[order.get("info").get("status")]
+        else:
+            logger.error("Cannot extract status for market {} (order)".format(market))
+        return Status.UNKNOWN
 
     def extract_good_order(self, orders):
         for order in orders:

@@ -4,8 +4,21 @@ import ccxt
 from dynaconf import settings
 from liqui import Liqui
 from binance.client import Client
+from strategies.analyser import Analyser
 
 logger = logging.getLogger(__name__)
+
+
+class Order:
+    def __init__(self, market, id, type, start_amount, remaining_amount, price, status):
+        self.market = market
+        self.type = type
+        self.id = id
+        self.start_amount = start_amount
+        self.executed_amount = round(start_amount - remaining_amount, 8)
+        self.remaining_amount = remaining_amount
+        self.price = price
+        self.status = status
 
 
 class Trader(object):
@@ -30,6 +43,26 @@ class Trader(object):
         # Init markets
         for key, value in self.markets.items():
             value.load_markets()
+
+    @staticmethod
+    def fill_buy_sell_order(order, market):
+        return Order(market,
+                     order.get('id'),
+                     Analyser.extract_type(order, market),
+                     Analyser.extract_start_amount(order, market),
+                     Analyser.extract_remaining_amount2(order, market),
+                     Analyser.extract_price2(order, market),
+                     Analyser.extract_status(order, market))
+
+    @staticmethod
+    def fill_fetch_order(order, market):
+        return Order(market,
+                     order.get('id'),
+                     Analyser.extract_type(order, market),
+                     Analyser.extract_start_amount(order, market),
+                     Analyser.extract_remaining_amount_order(order, market),
+                     Analyser.extract_price2(order, market),
+                     Analyser.extract_status_order(order, market))
 
     def buy(self, market, coin, volume, rate):
         symbol = self._pair.format(coin)

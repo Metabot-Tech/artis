@@ -2,6 +2,8 @@ import logging
 import time
 import sys
 import asyncio
+from strategies.trader import Trader
+from strategies.helper import Helper
 from database.models.trade import Trade
 from database.models.balance import Balance as BalanceModel
 from database.models.types import Types
@@ -24,12 +26,13 @@ class Balance(object):
     _sell_timeout = 5
     _sell_miss_percentage = 0.995
 
-    def __init__(self, coin, market1, market2, trader, analyser, reporter, database):
+    def __init__(self, coin, market1, market2, trader, analyser, reporter, database, helper):
         self.trader = trader
         self.analyser = analyser
         self.reporter = reporter
         self.reporter.logger = logger
         self.db = database
+        self.helper = helper
         self.coin = coin
         self.markets = [market1, market2]
         self.running = True
@@ -93,6 +96,20 @@ class Balance(object):
 
         return True
 
+    def _handle_miss_buy(self, order, market):
+        logger.warning("Trade miss when buying {} on {}. Cancelling order: {}".format(self.coin,
+                                                                                      market,
+                                                                                      order.get("id")))
+        try:
+            cancellation = self.trader.cancel_order(market, self.coin, order.get("id"))
+            logger.debug(cancellation)
+        except:
+            logger.exception("")
+            self.reporter.error("Cannot cancel buy: {} on {}".format(order.get("id"), market))
+
+        fetched_order = self.trader.fetch_order(market, self.coin, order.get("id"))
+        return Trader.fill_fetch_order(fetched_order, market)
+
     def _buy(self, analysis, volumes_wanted, asks):
         """
         This try to buy the selected coin from the selected market at the selected price.
@@ -109,22 +126,14 @@ class Balance(object):
             order = self.trader.buy(analysis.buy, self.coin, volumes_wanted.get('buy'), asks.get(analysis.buy)[0])
         except:
             logger.error("Failed to buy {} on {}".format(self.coin, analysis.buy))
-            return False, None
+            return None
 
         logger.debug(order)
 
         if not self.analyser.is_filled(order, analysis.buy):
-            try:
-                cancellation = self.trader.cancel_order(analysis.buy, self.coin, order.get("id"))
-                logger.debug(cancellation)
-            except:
-                self.reporter.error("FIX ME PLEASE: {} on {}".format(order.get("id"), analysis.buy))
-            self.reporter.warning("Trade miss when buying {} on {}. Cancelling order: {}".format(self.coin,
-                                                                                                 analysis.buy,
-                                                                                                 order.get("id")))
-            return False, order
+            return self._handle_miss_buy(order, analysis.buy)
 
-        return True, order
+        return Trader.fill_buy_sell_order(order, analysis.buy)
 
     def _handle_miss_sell(self, order, analysis, asks):
         # Check each second if sold until timeout
@@ -170,6 +179,64 @@ class Balance(object):
             return self._handle_miss_sell(order, analysis, asks)
 
         return True, order, None
+
+    def _get_trade_volumes(self, asks, bids, analysis):
+        # Check available volume
+        volumes = {
+            'ask': asks.get(analysis.buy)[1],
+            'bid': bids.get(analysis.sell)[1]
+        }
+
+        prices = {
+            'ask': asks.get(analysis.buy)[0],
+            'bid': bids.get(analysis.sell)[0]
+        }
+
+        volumes_wanted = {
+            'buy': round(settings.AMOUNT_TO_TRADE / asks.get(analysis.buy)[0], 6),
+            'sell': round(settings.AMOUNT_TO_TRADE / bids.get(analysis.sell)[0], 6)
+        }
+
+        # Ask too small
+        if volumes.get('ask') < volumes_wanted.get('buy'):
+            volumes_wanted['buy'] = volumes.get('ask')
+            volumes_wanted['sell'] = volumes.get('ask') / analysis.exposure
+            logger.debug("Ask too small, reducing sell to {} and buy to {}".format(volumes_wanted['sell'],
+                                                                                   volumes_wanted['buy']))
+
+        # Bid too small
+        if volumes.get('bid') < volumes_wanted.get('sell'):
+            volumes_wanted['buy'] = volumes.get('bid') * analysis.exposure
+            volumes_wanted['sell'] = volumes.get('bid')
+            logger.debug("Bid too small, reducing sell to {} and buy to {}".format(volumes_wanted['sell'],
+                                                                                   volumes_wanted['buy']))
+
+        # Wallet coin too small
+        if self.balance_coin.get(analysis.sell) < volumes_wanted.get('sell'):
+            if self.balance_coin.get(analysis.sell) * prices.get('bid') < settings.MINIMUM_AMOUNT_TO_TRADE:
+                self.reporter.error("Cannot sell, empty {} wallet on {}".format(self.coin, analysis.sell), 3600)
+                return None
+            else:
+                volumes_wanted['sell'] = self.balance_coin.get(analysis.sell)
+                volumes_wanted['buy'] = volumes_wanted.get('sell') * analysis.exposure
+                logger.debug("No enough coin in wallet, reducing sell to {} and buy to {}".format(volumes_wanted['sell'],
+                                                                                                  volumes_wanted['buy']))
+
+        # Wallet eth too small
+        if self.balance_eth.get(analysis.buy) < volumes_wanted.get('buy') * prices.get('ask'):
+            if self.balance_eth.get(analysis.buy) < settings.MINIMUM_AMOUNT_TO_TRADE:
+                self.reporter.error("Cannot buy, empty ETH wallet on {}".format(analysis.buy), 3600)
+                return None
+            else:
+                volumes_wanted['buy'] = self.balance_eth.get(analysis.buy) / prices.get('ask')
+                volumes_wanted['sell'] = volumes_wanted['buy'] / analysis.exposure
+                logger.debug("No enough eth in wallet, reducing sell to {} and buy to {}".format(volumes_wanted['sell'],
+                                                                                                 volumes_wanted['buy']))
+
+        volumes_wanted['buy'] = round(volumes_wanted['buy'])
+        volumes_wanted['sell'] = round(volumes_wanted['sell'])
+
+        return volumes_wanted
 
     def run(self):
         logger.debug("Starting balance strategy of {}".format(self.coin))
@@ -237,6 +304,9 @@ class Balance(object):
                     logger.warning("Bid too small, reducing sell to {} and buy to {}".format(volumes_wanted['sell'],
                                                                                              volumes_wanted['buy']))
 
+                volumes_wanted['buy'] = round(volumes.get('bid'))
+                volumes_wanted['sell'] = round(volumes.get('bid'))
+
                 # Check wallet amount
                 if self.balance_coin.get(analysis.sell) < volumes_wanted.get('sell'):
                     self.reporter.error("Cannot sell, empty {} wallet on {}".format(self.coin, analysis.sell), 3600)
@@ -257,10 +327,18 @@ class Balance(object):
                     continue
 
                 # Buy
-                buy_done, buy_order = self._buy(analysis, volumes_wanted, asks)
-                if not buy_done:
+                buy_order = self._buy(analysis, volumes_wanted, asks)
+                logger.debug(buy_order)
+                if buy_order is None:
                     continue
-                logger.info("Successfully performed buy order: {}".format(buy_order.get("id")))
+
+                if buy_order.executed_amount == 0:
+                    continue
+
+                if buy_order.remaining > 0:
+                    volumes_wanted['sell'] = round(buy_order.executed_amount / analysis.exposure)
+
+                logger.info("Successfully performed buy order: {}".format(buy_order.id))
 
                 # Sell
                 sell_done, sell_order, cancelled_sell_order = self._sell(analysis, volumes_wanted, bids, asks)
