@@ -125,24 +125,26 @@ class TestBalance(unittest.TestCase):
         assert order.id == BUY_ORDER_ID
 
     # TESTS HANDLE MISS BUY
-    def test_handle_miss_buy(self):
+    @mock.patch('time.sleep', return_value=None)
+    def test_handle_miss_buy(self, mock_sleep):
         self.mock_trader.cancel_order.return_value = {}
         self.mock_trader.fetch_order.return_value = LIQUI_FETCH_BUY_ORDER
 
         order = self.strategy._handle_miss_buy(LIQUI_BUY_ORDER, LIQUI)
 
         self.mock_trader.cancel_order.assert_called_once_with(LIQUI, COIN, BUY_ORDER_ID)
-        self.mock_trader.fetch_order.assert_called_once_with(LIQUI, COIN, BUY_ORDER_ID)
+        self.mock_trader.fetch_order.assert_called_with(LIQUI, COIN, BUY_ORDER_ID)
         assert order.id == BUY_ORDER_ID
 
-    def test_handle_miss_buy_cancellation_exception(self):
+    @mock.patch('time.sleep', return_value=None)
+    def test_handle_miss_buy_cancellation_exception(self, mock_sleep):
         self.mock_trader.cancel_order.side_effect = Exception('Order does not exist')
         self.mock_trader.fetch_order.return_value = LIQUI_FETCH_BUY_ORDER
 
         order = self.strategy._handle_miss_buy(LIQUI_BUY_ORDER, LIQUI)
 
         self.mock_trader.cancel_order.assert_called_once_with(LIQUI, COIN, BUY_ORDER_ID)
-        self.mock_trader.fetch_order.assert_called_once_with(LIQUI, COIN, BUY_ORDER_ID)
+        self.mock_trader.fetch_order.assert_called_with(LIQUI, COIN, BUY_ORDER_ID)
         assert order.id == BUY_ORDER_ID
 
     # TESTS SELL
