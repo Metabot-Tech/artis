@@ -297,7 +297,7 @@ class Balance(object):
 
                 if volumes_wanted is None:
                     update_balance = True
-                    time.sleep(30)
+                    time.sleep(2)
                     continue
 
                 # Check pending sells
