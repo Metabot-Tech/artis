@@ -227,6 +227,8 @@ class TestBalance(unittest.TestCase):
 
         self.mock_trader.fetch_order.assert_called_with(BINANCE, COIN, SELL_ORDER_ID)
         self.mock_trader.cancel_order.assert_called_once_with(BINANCE, COIN, SELL_ORDER_ID)
+        self.mock_trader.sell.assert_called_once_with(BINANCE, COIN, cancelled_order.remaining_amount,
+                                                      PRICE_ASK*self.strategy._sell_miss_percentage)
         assert done is True
         assert order.id == ANOTHER_ORDER_ID
         assert cancelled_order.id == SELL_ORDER_ID

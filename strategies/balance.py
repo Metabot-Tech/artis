@@ -139,8 +139,9 @@ class Balance(object):
         # Check each second if sold until timeout
         for i in range(self._sell_timeout):
             fetched_order = self.trader.fetch_order(analysis.sell, self.coin, order.get("id"))
-            if self.analyser.is_order_filled(fetched_order, order.get("id"), analysis.sell):
-                return True, Trader.fill_fetch_order(fetched_order, analysis.sell), None
+            fetched_order = Trader.fill_fetch_order(fetched_order, analysis.sell)
+            if fetched_order.status == Status.DONE:
+                return True, fetched_order, None
             time.sleep(1)
 
         # If not sold, cancel order
