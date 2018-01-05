@@ -17,8 +17,4 @@ class Helper(object):
                 logger.exception("Exception during method call")
         raise Exception("Impossible to call method")
 
-    @staticmethod
-    def biggest_coin(amount1, amount2, price):
-        return max([amount1, amount2]) / price
-
 

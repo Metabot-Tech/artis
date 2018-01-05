@@ -97,9 +97,9 @@ class Balance(object):
         return True
 
     def _handle_miss_buy(self, order, market):
-        logger.warning("Trade miss when buying {} on {}. Cancelling order: {}".format(self.coin,
-                                                                                      market,
-                                                                                      order.get("id")))
+        self.reporter.warning("Trade miss when buying {} on {}. Cancelling order: {}".format(self.coin,
+                                                                                             market,
+                                                                                             order.get("id")))
         try:
             cancellation = self.trader.cancel_order(market, self.coin, order.get("id"))
             logger.debug(cancellation)
@@ -125,7 +125,7 @@ class Balance(object):
         try:
             order = self.trader.buy(analysis.buy, self.coin, volumes_wanted.get('buy'), asks.get(analysis.buy)[0])
         except:
-            logger.error("Failed to buy {} on {}".format(self.coin, analysis.buy))
+            logger.exception("Failed to buy {} on {}".format(self.coin, analysis.buy))
             return None
 
         logger.debug(order)
@@ -140,7 +140,7 @@ class Balance(object):
         for i in range(self._sell_timeout):
             fetched_order = self.trader.fetch_order(analysis.sell, self.coin, order.get("id"))
             if self.analyser.is_order_filled(fetched_order, order.get("id"), analysis.sell):
-                return True, order, None
+                return True, Trader.fill_fetch_order(fetched_order, analysis.sell), None
             time.sleep(1)
 
         # If not sold, cancel order
@@ -151,19 +151,21 @@ class Balance(object):
         logger.debug(cancellation)
 
         # Create new order at market price
+        old_order = self.trader.fetch_order(analysis.sell, self.coin, order.get("id"))
+        old_order = Trader.fill_fetch_order(old_order, analysis.sell)
         try:
             new_price = asks.get(analysis.sell)[0]*self._sell_miss_percentage
             logger.debug(new_price)
-            new_order = self.trader.sell(analysis.sell, self.coin, self.analyser.extract_remaining_amount(order, analysis.sell),
+            new_order = self.trader.sell(analysis.sell, self.coin, old_order.remaining_amount,
                                          asks.get(analysis.sell)[0]*self._sell_miss_percentage)
         except:
             self.reporter.error("Failed to sell {} on {}, stopping".format(self.coin, analysis.sell))
             logger.exception("")
-            return False, None, order
+            return False, None, old_order
 
         logger.debug(new_order)
 
-        return True, new_order, order
+        return True, Trader.fill_buy_sell_order(new_order, analysis.sell), old_order
 
     def _sell(self, analysis, volumes_wanted, bids, asks):
         try:
@@ -178,9 +180,9 @@ class Balance(object):
         if not self.analyser.is_filled(order, analysis.sell):
             return self._handle_miss_sell(order, analysis, asks)
 
-        return True, order, None
+        return True, Trader.fill_buy_sell_order(order, analysis.sell), None
 
-    def _get_trade_volumes(self, asks, bids, analysis):
+    def _get_trade_volumes(self, asks, bids, analysis, rounding=0):
         # Check available volume
         volumes = {
             'ask': asks.get(analysis.buy)[1],
@@ -233,8 +235,13 @@ class Balance(object):
                 logger.debug("No enough eth in wallet, reducing sell to {} and buy to {}".format(volumes_wanted['sell'],
                                                                                                  volumes_wanted['buy']))
 
-        volumes_wanted['buy'] = round(volumes_wanted['buy'])
-        volumes_wanted['sell'] = round(volumes_wanted['sell'])
+        # Remove fees
+        volumes_wanted['buy'] = volumes_wanted['buy'] * (1 - settings.get(analysis.buy).SERVICE_FEE_HIGH)
+        volumes_wanted['sell'] = volumes_wanted['sell'] * (1 - settings.get(analysis.sell).SERVICE_FEE_HIGH)
+
+        # Round
+        volumes_wanted['buy'] = round(volumes_wanted['buy'], rounding)
+        volumes_wanted['sell'] = round(volumes_wanted['sell'], rounding)
 
         return volumes_wanted
 
@@ -247,8 +254,6 @@ class Balance(object):
         pending_sells = 0
 
         while self.running:
-            #logger.info("Balance started for coin {}".format(self.coin))
-
             # Update balance
             if update_balance:
                 if self._update_balance(transaction):
@@ -275,55 +280,22 @@ class Balance(object):
 
             # Perform balance
             for analysis in analyses:
-                #logger.debug("Exposure: {}".format(analysis.exposure))
-
                 # Check profit
                 if analysis.exposure < settings.PROFIT_FACTOR:
                     continue
 
                 # Check available volume
-                volumes = {
-                    'ask': asks.get(analysis.buy)[1],
-                    'bid': bids.get(analysis.sell)[1]
-                }
+                volumes_wanted = self._get_trade_volumes(asks, bids, analysis)
 
-                volumes_wanted = {
-                    'buy': round(settings.AMOUNT_TO_TRADE/asks.get(analysis.buy)[0], 6),
-                    'sell': round(settings.AMOUNT_TO_TRADE/bids.get(analysis.sell)[0], 6)
-                }
-
-                if volumes.get('ask') < volumes_wanted.get('buy'):
-                    volumes_wanted['buy'] = volumes.get('ask')
-                    volumes_wanted['sell'] = volumes.get('ask')/analysis.exposure
-                    logger.warning("Ask too small, reducing sell to {} and buy to {}".format(volumes_wanted['sell'],
-                                                                                             volumes_wanted['buy']))
-
-                if volumes.get('bid') < volumes_wanted.get('sell'):
-                    volumes_wanted['buy'] = volumes.get('bid') * analysis.exposure
-                    volumes_wanted['sell'] = volumes.get('bid')
-                    logger.warning("Bid too small, reducing sell to {} and buy to {}".format(volumes_wanted['sell'],
-                                                                                             volumes_wanted['buy']))
-
-                volumes_wanted['buy'] = round(volumes.get('bid'))
-                volumes_wanted['sell'] = round(volumes.get('bid'))
-
-                # Check wallet amount
-                if self.balance_coin.get(analysis.sell) < volumes_wanted.get('sell'):
-                    self.reporter.error("Cannot sell, empty {} wallet on {}".format(self.coin, analysis.sell), 3600)
-                    time.sleep(60)
-                    update_balance = True
-                    continue
-
-                if self.balance_eth.get(analysis.buy) < volumes_wanted.get('buy')*asks.get(analysis.buy)[0]:
-                    self.reporter.error("Cannot buy, empty ETH wallet on {}".format(analysis.buy), 3600)
-                    time.sleep(60)
+                if volumes_wanted is None:
                     update_balance = True
                     continue
 
                 # Check pending sells
                 if pending_sells >= self._max_pending_sells:
                     pending_sells = self._update_pending_sells()
-                    self.reporter.error("Too many pending sales, please address the issue")
+                    if pending_sells > 0:
+                        self.reporter.error("{} pending sales, please address the issue".format(pending_sells))
                     continue
 
                 # Buy
@@ -335,8 +307,13 @@ class Balance(object):
                 if buy_order.executed_amount == 0:
                     continue
 
-                if buy_order.remaining > 0:
-                    volumes_wanted['sell'] = round(buy_order.executed_amount / analysis.exposure)
+                if buy_order.remaining_amount > 0:
+                    if buy_order.remaining_amount > settings.MINIMUM_AMOUNT_TO_TRADE*bids.get(analysis.sell)[0]:
+                        volumes_wanted['sell'] = round(buy_order.executed_amount / analysis.exposure)
+                    else:
+                        self.reporter.error("Buy miss {} on {} not big enough to sell, remaining: {}".format(buy_order.id,
+                                                                                                             buy_order.market,
+                                                                                                             buy_order.remaining_amount))
 
                 logger.info("Successfully performed buy order: {}".format(buy_order.id))
 
@@ -346,7 +323,7 @@ class Balance(object):
                     # TODO: Should not exit here, should at least save the state
                     logger.error("Currently not handling bad sell, stopping")
                     sys.exit(1)
-                logger.info("Successfully performed sell order: {}".format(sell_order.get("id")))
+                logger.info("Successfully performed sell order: {}".format(sell_order.id))
 
                 # Store buy information in database
                 transaction = self.db.create_transaction()
@@ -354,17 +331,14 @@ class Balance(object):
                                   analysis.buy,
                                   Types.BUY,
                                   self.coin,
-                                  self.analyser.extract_amount(buy_order, analysis.buy),
-                                  self.analyser.extract_price(buy_order, analysis.buy),
-                                  buy_order.get("id"),
-                                  Status.DONE)
+                                  buy_order.executed_amount,
+                                  buy_order.price,
+                                  buy_order.id,
+                                  buy_order.status)
                 self.db.upsert_trade(buy_trade)
 
                 # Store sell information in database
-                if self.analyser.is_filled(sell_order, analysis.sell):
-                    sell_status = Status.DONE
-                else:
-                    sell_status = Status.ONGOING
+                if sell_order.remaining_amount > 0:
                     pending_sells += 1
 
                 if cancelled_sell_order is not None:
@@ -372,26 +346,24 @@ class Balance(object):
                                                  analysis.sell,
                                                  Types.SELL,
                                                  self.coin,
-                                                 self.analyser.extract_amount(sell_order, analysis.sell),
-                                                 self.analyser.extract_price(sell_order, analysis.sell),
-                                                 sell_order.get("id"),
-                                                 Status.CANCELLED)
+                                                 cancelled_sell_order.executed_amount,
+                                                 cancelled_sell_order.price,
+                                                 cancelled_sell_order.id,
+                                                 cancelled_sell_order.status)
                     self.db.upsert_trade(cancelled_sell_trade)
 
                 sell_trade = Trade(transaction,
                                    analysis.sell,
                                    Types.SELL,
                                    self.coin,
-                                   self.analyser.extract_amount(sell_order, analysis.sell),
-                                   self.analyser.extract_price(sell_order, analysis.sell),
-                                   sell_order.get("id"),
-                                   sell_status)
+                                   sell_order.start_amount,
+                                   sell_order.price,
+                                   sell_order.id,
+                                   sell_order.status)
                 self.db.upsert_trade(sell_trade)
 
                 update_balance = True
                 break
 
-            #logger.info("Balance done for coin {}".format(self.coin))
-
             # Sleep
-            time.sleep(1)
+            time.sleep(0.1)

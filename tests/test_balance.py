@@ -1,5 +1,6 @@
 import unittest
 import unittest.mock as mock
+import os
 from strategies.balance import Balance
 from strategies.balance import Analysis
 from strategies.trader import Trader
@@ -14,6 +15,7 @@ from database.models.markets import Markets
 from database.models.status import Status
 from tests.orders import *
 from dynaconf import settings
+from dynaconf.utils.boxing import DynaBox
 
 ETH = "ETH"
 COIN = "TRX"
@@ -25,15 +27,16 @@ AMOUNT_ETH = 0.5
 SMALL_AMOUNT_ETH = 0.01
 PRICE_ASK = 0.000052
 PRICE_BID = 0.000055
-ORDER_ID = '183892657'
-ANOTHER_ORDER_ID = 2222
+BUY_ORDER_ID = '183892657'
+SELL_ORDER_ID = '5256209'
+ANOTHER_ORDER_ID = '6183482'
 ORDER_AMOUNT = 5000
 EXPOSURE = 1.057692308
 VOLUME_BUY = 600
 SMALL_VOLUME_BUY = 100
 VOLUME_SELL = 500
 SMALL_VOLUME_SELL = 110
-
+SERVICE_FEE = 0.001
 
 
 class AsyncMock(mock.MagicMock):
@@ -43,6 +46,8 @@ class AsyncMock(mock.MagicMock):
 
 class TestBalance(unittest.TestCase):
     def setUp(self):
+        settings.configure(settings_module=os.path.dirname(os.path.realpath(__file__)) + '/settings.yml')
+
         self.mock_trader = mock.create_autospec(Trader)
         self.mock_analyser = mock.create_autospec(Analyser)
         self.mock_reporter = mock.create_autospec(Reporter)
@@ -58,7 +63,7 @@ class TestBalance(unittest.TestCase):
 
     # TESTS UPDATE
     def test_update_pending_sells(self):
-        trade = Trade(None, Markets[LIQUI], Types.SELL, Coins[COIN], AMOUNT_COIN, PRICE_ASK, ORDER_ID, Status.ONGOING)
+        trade = Trade(None, Markets[LIQUI], Types.SELL, Coins[COIN], AMOUNT_COIN, PRICE_ASK, BUY_ORDER_ID, Status.ONGOING)
         self.mock_database.fetch_pending_sells.return_value = [trade]
         self.mock_trader.fetch_order.return_value = {}
         self.mock_analyser.is_filled.return_value = True
@@ -92,7 +97,7 @@ class TestBalance(unittest.TestCase):
 
         self.mock_trader.buy.assert_called_once_with(LIQUI, COIN, ORDER_AMOUNT, PRICE_ASK)
         self.mock_trader.cancel_order.assert_not_called()
-        assert order.id == ORDER_ID
+        assert order.id == BUY_ORDER_ID
 
     def test_buy_exception(self):
         self.mock_trader.buy.side_effect = Exception('timeout')
@@ -117,7 +122,7 @@ class TestBalance(unittest.TestCase):
 
         self.mock_trader.buy.assert_called_once_with(LIQUI, COIN, ORDER_AMOUNT, PRICE_ASK)
         self.strategy._handle_miss_buy.assert_called_once_with(LIQUI_BUY_ORDER, analysis.buy)
-        assert order.id == ORDER_ID
+        assert order.id == BUY_ORDER_ID
 
     # TESTS HANDLE MISS BUY
     def test_handle_miss_buy(self):
@@ -126,9 +131,9 @@ class TestBalance(unittest.TestCase):
 
         order = self.strategy._handle_miss_buy(LIQUI_BUY_ORDER, LIQUI)
 
-        self.mock_trader.cancel_order.assert_called_once_with(LIQUI, COIN, ORDER_ID)
-        self.mock_trader.fetch_order.assert_called_once_with(LIQUI, COIN, ORDER_ID)
-        assert order.id == ORDER_ID
+        self.mock_trader.cancel_order.assert_called_once_with(LIQUI, COIN, BUY_ORDER_ID)
+        self.mock_trader.fetch_order.assert_called_once_with(LIQUI, COIN, BUY_ORDER_ID)
+        assert order.id == BUY_ORDER_ID
 
     def test_handle_miss_buy_cancellation_exception(self):
         self.mock_trader.cancel_order.side_effect = Exception('Order does not exist')
@@ -136,13 +141,13 @@ class TestBalance(unittest.TestCase):
 
         order = self.strategy._handle_miss_buy(LIQUI_BUY_ORDER, LIQUI)
 
-        self.mock_trader.cancel_order.assert_called_once_with(LIQUI, COIN, ORDER_ID)
-        self.mock_trader.fetch_order.assert_called_once_with(LIQUI, COIN, ORDER_ID)
-        assert order.id == ORDER_ID
+        self.mock_trader.cancel_order.assert_called_once_with(LIQUI, COIN, BUY_ORDER_ID)
+        self.mock_trader.fetch_order.assert_called_once_with(LIQUI, COIN, BUY_ORDER_ID)
+        assert order.id == BUY_ORDER_ID
 
     # TESTS SELL
     def test_sell_filled(self):
-        self.mock_trader.sell.return_value = {'id': ORDER_ID}
+        self.mock_trader.sell.return_value = BINANCE_SELL_ORDER
         self.mock_analyser.is_filled.return_value = True
 
         analysis = Analysis(LIQUI, BINANCE, EXPOSURE)
@@ -154,11 +159,11 @@ class TestBalance(unittest.TestCase):
         self.mock_trader.sell.assert_called_once_with(BINANCE, COIN, ORDER_AMOUNT, PRICE_BID)
         self.mock_trader.cancel_order.assert_not_called()
         assert done is True
-        assert order.get('id') == ORDER_ID
+        assert order.id == SELL_ORDER_ID
         assert cancelled_order is None
 
     def test_miss_sell(self):
-        initial_order = {'id': ORDER_ID}
+        initial_order = {'id': BUY_ORDER_ID}
         self.mock_trader.sell.return_value = initial_order
         self.mock_analyser.is_filled.return_value = False
         self.strategy._handle_miss_sell = mock.Mock(return_value=(True, initial_order, None))
@@ -172,7 +177,7 @@ class TestBalance(unittest.TestCase):
         self.mock_trader.sell.assert_called_once_with(BINANCE, COIN, ORDER_AMOUNT, PRICE_BID)
         self.strategy._handle_miss_sell.assert_called_once_with(order, analysis, asks)
         assert done is True
-        assert order.get('id') == ORDER_ID
+        assert order.get('id') == BUY_ORDER_ID
         assert cancelled_order is None
 
     def test_sell_exception(self):
@@ -192,19 +197,18 @@ class TestBalance(unittest.TestCase):
 
     # TESTS HANDLE MISS SELL
     def test_handle_miss_sell(self):
-        initial_order = {'id': ORDER_ID}
-        fetched_order = "This is a fetched order"
-        self.mock_trader.fetch_order.return_value = fetched_order
+        initial_order = {'id': SELL_ORDER_ID}
+        self.mock_trader.fetch_order.return_value = BINANCE_FETCH_SELL_ORDER
         self.mock_analyser.is_order_filled.return_value = True
 
         analysis = Analysis(LIQUI, BINANCE, EXPOSURE)
         asks = {LIQUI: [PRICE_ASK]}
         done, order, cancelled_order = self.strategy._handle_miss_sell(initial_order, analysis, asks)
 
-        self.mock_trader.fetch_order.assert_called_once_with(BINANCE, COIN, ORDER_ID)
+        self.mock_trader.fetch_order.assert_called_once_with(BINANCE, COIN, SELL_ORDER_ID)
         self.mock_trader.cancel_order.assert_not_called()
         assert done is True
-        assert order.get('id') == ORDER_ID
+        assert order.id == SELL_ORDER_ID
         assert cancelled_order is None
 
     def test_handle_miss_sell_fetch_throw(self):
@@ -212,21 +216,20 @@ class TestBalance(unittest.TestCase):
 
     @mock.patch('time.sleep', return_value=None)
     def test_handle_miss_sell_cancellation(self, mock_sleep):
-        initial_order = {'id': ORDER_ID}
-        fetched_order = "This is a fetched order"
-        self.mock_trader.fetch_order.return_value = fetched_order
-        self.mock_trader.sell.return_value = {'id': ANOTHER_ORDER_ID}
+        initial_order = {'id': SELL_ORDER_ID}
+        self.mock_trader.fetch_order.return_value = BINANCE_FETCH_SELL_ORDER
+        self.mock_trader.sell.return_value = BINANCE_ANOTHER_SELL_ORDER
         self.mock_analyser.is_order_filled.return_value = False
 
         analysis = Analysis(LIQUI, BINANCE, EXPOSURE)
         asks = {BINANCE: [PRICE_ASK]}
         done, order, cancelled_order = self.strategy._handle_miss_sell(initial_order, analysis, asks)
 
-        self.mock_trader.fetch_order.assert_called_with(BINANCE, COIN, ORDER_ID)
-        self.mock_trader.cancel_order.assert_called_once_with(BINANCE, COIN, ORDER_ID)
+        self.mock_trader.fetch_order.assert_called_with(BINANCE, COIN, SELL_ORDER_ID)
+        self.mock_trader.cancel_order.assert_called_once_with(BINANCE, COIN, SELL_ORDER_ID)
         assert done is True
-        assert order.get('id') == ANOTHER_ORDER_ID
-        assert cancelled_order.get('id') == ORDER_ID
+        assert order.id == ANOTHER_ORDER_ID
+        assert cancelled_order.id == SELL_ORDER_ID
 
     def test_handle_miss_sell_cancellation_exception(self):
         pass
@@ -236,7 +239,6 @@ class TestBalance(unittest.TestCase):
 
     # TESTS GET TRADE VOLUMES
     def test_get_trade_volumes_no_reduction(self):
-        settings.AMOUNT_TO_TRADE = 0.02
         self.strategy.balance_eth = {"LIQUI": 1, "BINANCE": 1}
         self.strategy.balance_coin = {"LIQUI": 10000, "BINANCE": 10000}
 
@@ -250,7 +252,6 @@ class TestBalance(unittest.TestCase):
         assert volumes_wanted.get('sell') == round(settings.AMOUNT_TO_TRADE / PRICE_BID)
 
     def test_get_trade_volumes_ask_too_small(self):
-        settings.AMOUNT_TO_TRADE = 0.02
         self.strategy.balance_eth = {"LIQUI": 1, "BINANCE": 1}
         self.strategy.balance_coin = {"LIQUI": 10000, "BINANCE": 10000}
 
@@ -264,7 +265,6 @@ class TestBalance(unittest.TestCase):
         assert volumes_wanted.get('sell') == round(SMALL_VOLUME_BUY / EXPOSURE)
 
     def test_get_trade_volumes_bid_too_small(self):
-        settings.AMOUNT_TO_TRADE = 0.02
         self.strategy.balance_eth = {"LIQUI": 1, "BINANCE": 1}
         self.strategy.balance_coin = {"LIQUI": 10000, "BINANCE": 10000}
 
@@ -278,9 +278,6 @@ class TestBalance(unittest.TestCase):
         assert volumes_wanted.get('sell') == SMALL_VOLUME_SELL
 
     def test_get_trade_volumes_wallet_eth_too_small(self):
-        settings.AMOUNT_TO_TRADE = 0.02
-        settings.MINIMUM_AMOUNT_TO_TRADE = 0.001
-
         self.strategy.balance_eth = {"LIQUI": SMALL_AMOUNT_ETH, "BINANCE": 1}
         self.strategy.balance_coin = {"LIQUI": 10000, "BINANCE": 10000}
 
@@ -294,9 +291,6 @@ class TestBalance(unittest.TestCase):
         assert volumes_wanted.get('sell') == round(SMALL_AMOUNT_ETH / PRICE_ASK / EXPOSURE)
 
     def test_get_trade_volumes_wallet_coin_too_small(self):
-        settings.AMOUNT_TO_TRADE = 0.02
-        settings.MINIMUM_AMOUNT_TO_TRADE = 0.001
-
         self.strategy.balance_eth = {"LIQUI": 1, "BINANCE": 1}
         self.strategy.balance_coin = {"LIQUI": 10000, "BINANCE": SMALL_AMOUNT_COIN}
 
@@ -310,9 +304,6 @@ class TestBalance(unittest.TestCase):
         assert volumes_wanted.get('sell') == round(SMALL_AMOUNT_COIN)
 
     def test_get_trade_volumes_wallet_eth_below_minimum(self):
-        settings.AMOUNT_TO_TRADE = 0.02
-        settings.MINIMUM_AMOUNT_TO_TRADE = 0.001
-
         self.strategy.balance_eth = {"LIQUI": 0.0005, "BINANCE": 1}
         self.strategy.balance_coin = {"LIQUI": 10000, "BINANCE": 10000}
 
@@ -325,9 +316,7 @@ class TestBalance(unittest.TestCase):
         assert volumes_wanted is None
 
     def test_get_trade_volumes_wallet_coin_below_minimum(self):
-        settings.AMOUNT_TO_TRADE = 0.02
         settings.MINIMUM_AMOUNT_TO_TRADE = 0.01
-
         self.strategy.balance_eth = {"LIQUI": 1, "BINANCE": 1}
         self.strategy.balance_coin = {"LIQUI": 10000, "BINANCE": 30}
 
@@ -339,6 +328,20 @@ class TestBalance(unittest.TestCase):
 
         assert volumes_wanted is None
 
+    def test_get_trade_volumes_with_fees(self):
+        settings.LIQUI.SERVICE_FEE_HIGH = SERVICE_FEE
+        settings.BINANCE.SERVICE_FEE_HIGH = SERVICE_FEE
+        self.strategy.balance_eth = {"LIQUI": 1, "BINANCE": 1}
+        self.strategy.balance_coin = {"LIQUI": 10000, "BINANCE": 10000}
+
+        asks = {LIQUI: [PRICE_ASK, VOLUME_BUY]}
+        bids = {BINANCE: [PRICE_BID, VOLUME_SELL]}
+        analysis = Analysis(LIQUI, BINANCE, EXPOSURE)
+
+        volumes_wanted = self.strategy._get_trade_volumes(asks, bids, analysis)
+
+        assert volumes_wanted.get('buy') == round(settings.AMOUNT_TO_TRADE / PRICE_ASK * (1 - SERVICE_FEE))
+        assert volumes_wanted.get('sell') == round(settings.AMOUNT_TO_TRADE / PRICE_BID * (1 - SERVICE_FEE))
 
 
 

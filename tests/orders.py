@@ -52,6 +52,22 @@ BINANCE_SELL_ORDER = {
     }, 'id': '5256209'
 }
 
+BINANCE_ANOTHER_SELL_ORDER = {
+    'info': {
+        'symbol': 'TRXETH',
+        'orderId': 6183482,
+        'clientOrderId': 'tRLWnGuSPmzDIInEem3XeW',
+        'transactTime': 1515088771607,
+        'price': '0.00020749',
+        'origQty': '202.00000000',
+        'executedQty': '202.00000000',
+        'status': 'FILLED',
+        'timeInForce': 'GTC',
+        'type': 'LIMIT',
+        'side': 'SELL',
+    }, 'id': '6183482'
+}
+
 LIQUI_FETCH_BUY_ORDER = {
     'amount': 199.00,
     'cost': None,
