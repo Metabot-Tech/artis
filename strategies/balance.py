@@ -53,7 +53,8 @@ class Balance(object):
         pending_sells = len(sells)
         for sell in sells:
             order = self.trader.fetch_order(sell.market.name, sell.coin.name, sell.order_id)
-            if self.analyser.is_filled(order, sell.market.name):
+            order = Trader.fill_fetch_order(order, sell.market.name)
+            if order.status == Status.DONE:
                 pending_sells -= 1
                 sell.status = Status.DONE
                 self.db.upsert_trade(sell)

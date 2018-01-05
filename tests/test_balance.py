@@ -63,10 +63,9 @@ class TestBalance(unittest.TestCase):
 
     # TESTS UPDATE
     def test_update_pending_sells(self):
-        trade = Trade(None, Markets[LIQUI], Types.SELL, Coins[COIN], AMOUNT_COIN, PRICE_ASK, BUY_ORDER_ID, Status.ONGOING)
+        trade = Trade(None, Markets[BINANCE], Types.SELL, Coins[COIN], AMOUNT_COIN, PRICE_ASK, BUY_ORDER_ID, Status.ONGOING)
         self.mock_database.fetch_pending_sells.return_value = [trade]
-        self.mock_trader.fetch_order.return_value = {}
-        self.mock_analyser.is_filled.return_value = True
+        self.mock_trader.fetch_order.return_value = BINANCE_FETCH_SELL_ORDER
 
         pending_sells = self.strategy._update_pending_sells()
 
