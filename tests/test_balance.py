@@ -199,7 +199,6 @@ class TestBalance(unittest.TestCase):
     def test_handle_miss_sell(self):
         initial_order = {'id': SELL_ORDER_ID}
         self.mock_trader.fetch_order.return_value = BINANCE_FETCH_SELL_ORDER
-        self.mock_analyser.is_order_filled.return_value = True
 
         analysis = Analysis(LIQUI, BINANCE, EXPOSURE)
         asks = {LIQUI: [PRICE_ASK]}
@@ -217,9 +216,8 @@ class TestBalance(unittest.TestCase):
     @mock.patch('time.sleep', return_value=None)
     def test_handle_miss_sell_cancellation(self, mock_sleep):
         initial_order = {'id': SELL_ORDER_ID}
-        self.mock_trader.fetch_order.return_value = BINANCE_FETCH_SELL_ORDER
+        self.mock_trader.fetch_order.return_value = BINANCE_FETCH_NEW_SELL_ORDER
         self.mock_trader.sell.return_value = BINANCE_ANOTHER_SELL_ORDER
-        self.mock_analyser.is_order_filled.return_value = False
 
         analysis = Analysis(LIQUI, BINANCE, EXPOSURE)
         asks = {BINANCE: [PRICE_ASK]}

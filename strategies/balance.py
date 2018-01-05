@@ -24,6 +24,7 @@ class Analysis:
 class Balance(object):
     _max_pending_sells = 5
     _sell_timeout = 5
+    _buy_timeout = 4
     _sell_miss_percentage = 0.995
 
     def __init__(self, coin, market1, market2, trader, analyser, reporter, database, helper):
@@ -97,6 +98,14 @@ class Balance(object):
         return True
 
     def _handle_miss_buy(self, order, market):
+        # Check each 250ms if bought until timeout
+        for i in range(self._buy_timeout):
+            fetched_order = self.trader.fetch_order(market, self.coin, order.get("id"))
+            fetched_order = Trader.fill_fetch_order(fetched_order, market)
+            if fetched_order.status == Status.DONE:
+                return fetched_order
+            time.sleep(0.25)
+
         self.reporter.warning("Trade miss when buying {} on {}. Cancelling order: {}".format(self.coin,
                                                                                              market,
                                                                                              order.get("id")))
@@ -156,9 +165,7 @@ class Balance(object):
         old_order = Trader.fill_fetch_order(old_order, analysis.sell)
         try:
             new_price = asks.get(analysis.sell)[0]*self._sell_miss_percentage
-            logger.debug(new_price)
-            new_order = self.trader.sell(analysis.sell, self.coin, old_order.remaining_amount,
-                                         asks.get(analysis.sell)[0]*self._sell_miss_percentage)
+            new_order = self.trader.sell(analysis.sell, self.coin, old_order.remaining_amount, new_price)
         except:
             self.reporter.error("Failed to sell {} on {}, stopping".format(self.coin, analysis.sell))
             logger.exception("")
@@ -302,7 +309,6 @@ class Balance(object):
 
                 # Buy
                 buy_order = self._buy(analysis, volumes_wanted, asks)
-                logger.debug(buy_order)
                 if buy_order is None:
                     continue
 
