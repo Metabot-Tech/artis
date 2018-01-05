@@ -242,6 +242,7 @@ class Analyser(object):
                     3: Status.CANCELLED}[order.get("info").get("status")]
         elif market == "BINANCE":
             return {'NEW': Status.ONGOING,
+                    'PARTIALLY_FILLED': Status.ONGOING,
                     'FILLED': Status.DONE,
                     'CANCELED': Status.CANCELLED}[order.get("info").get("status")]
         else:
