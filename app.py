@@ -28,12 +28,16 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    logger.debug("Creating strategy")
-    strategy = Balance("TRX", "LIQUI", "BINANCE", Trader(), Analyser(), Reporter(), Database(), Helper())
+    reporter = Reporter()
+    try:
+        logger.debug("Creating strategy")
+        strategy = Balance("TRX", "LIQUI", "BINANCE", Trader(), Analyser(), reporter, Database(), Helper())
 
-    logger.info("Start running current strategy")
-    strategy.run()
-    logger.info("Finished running current strategy")
+        logger.info("Start running current strategy")
+        strategy.run()
+        logger.info("Finished running current strategy")
+    except:
+        reporter.error("I am dead, please revive me!")
 
 if __name__ == '__main__':
     main()
