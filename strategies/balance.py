@@ -317,7 +317,7 @@ class Balance(object):
                     continue
 
                 if buy_order.remaining_amount > 0:
-                    if buy_order.remaining_amount > settings.MINIMUM_AMOUNT_TO_TRADE*bids.get(analysis.sell)[0]:
+                    if buy_order.remaining_amount > settings.MINIMUM_AMOUNT_TO_TRADE/bids.get(analysis.sell)[0]:
                         volumes_wanted['sell'] = round(buy_order.executed_amount / analysis.exposure)
                     else:
                         self.reporter.error("Buy miss {} on {} not big enough to sell, remaining: {}".format(buy_order.id,
