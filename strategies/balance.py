@@ -26,7 +26,7 @@ class Balance(object):
     _max_pending_sells = 5
     _sell_timeout = 5
     _buy_timeout = 4
-    _sell_miss_percentage = 0.995
+    _sell_miss_percentage = 0.998
 
     def __init__(self, coin, market1, market2, trader, analyser, reporter, database, helper):
         self.trader = trader
@@ -177,7 +177,7 @@ class Balance(object):
         old_order = self.trader.fetch_order(analysis.sell, self.coin, order.get("id"))
         old_order = Trader.fill_fetch_order(old_order, analysis.sell)
         try:
-            new_price = asks.get(analysis.sell)[0]*self._sell_miss_percentage
+            new_price = old_order.price*self._sell_miss_percentage
             new_order = self.trader.sell(analysis.sell, self.coin, old_order.remaining_amount, new_price)
         except:
             self.reporter.error("Failed to sell {} on {}, stopping".format(self.coin, analysis.sell))
@@ -332,9 +332,10 @@ class Balance(object):
                     exposure = 1 + (analysis.exposure - 1) / 2
                     volumes_wanted['sell'] = round(buy_order.executed_amount / exposure)
                 else:
-                    self.reporter.error("Buy miss {} on {} not big enough to sell, executed: {}".format(buy_order.id,
-                                                                                                        buy_order.market,
-                                                                                                        buy_order.executed_amount))
+                    if buy_order.executed_amount > 0:
+                        self.reporter.error("Buy miss {} on {} not big enough to sell, executed: {}".format(buy_order.id,
+                                                                                                            buy_order.market,
+                                                                                                            buy_order.executed_amount))
                     continue
 
                 logger.info("Successfully performed buy order: {}".format(buy_order.id))
