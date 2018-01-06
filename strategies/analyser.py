@@ -85,26 +85,6 @@ class Analyser(object):
     async def get_balance(self, market, params={}):
         return await self.markets.get(market).fetch_balance(params=params)
 
-    def is_filled(self, order, market):
-        """
-        Use this method when parsing the result of a buy/sell
-
-        :param order:
-        :param market:
-        :return:
-        """
-
-        # TODO: Refactor to add markets more easily
-        if market == "LIQUI":
-            if order.get("info").get("return").get("order_id") == 0:
-                return True
-        elif market == "BINANCE":
-            if order.get("info").get("status") == "FILLED":
-                return True
-        else:
-            logger.error("Cannot extract status for market {}".format(market))
-        return False
-
     def is_order_filled(self, order, order_id, market):
         """
         Use this method when parsing the result of an order fetch
@@ -248,6 +228,13 @@ class Analyser(object):
         else:
             logger.error("Cannot extract status for market {} (order)".format(market))
         return Status.UNKNOWN
+
+    @staticmethod
+    def is_filled(order, market):
+        if Analyser.extract_status(order, market) == Status.DONE:
+            return True
+        else:
+            return False
 
     def extract_good_order(self, orders):
         for order in orders:

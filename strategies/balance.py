@@ -3,6 +3,7 @@ import time
 import sys
 import asyncio
 from strategies.trader import Trader
+from strategies.analyser import Analyser
 from strategies.helper import Helper
 from database.models.trade import Trade
 from database.models.balance import Balance as BalanceModel
@@ -117,30 +118,30 @@ class Balance(object):
         fetched_order = self.trader.fetch_order(market, self.coin, order.get("id"))
         return Trader.fill_fetch_order(fetched_order, market)
 
-    def _buy(self, analysis, volumes_wanted, asks):
+    def _buy(self, market, volume, rate):
         """
         This try to buy the selected coin from the selected market at the selected price.
         It will cancel the order if it is not able to fill the order instantly.
 
         .. todo:: Change the parameters
 
-        :param analysis: The analysis object
-        :param volumes_wanted: The volume wanted
-        :param asks: Asks for all markets
-        :return: Boolean for order completion and the order itself
+        :param market: The analysis object
+        :param volume: The volume wanted
+        :param rate: The wanted rate
+        :return: The order or None if couldn't buy
         """
         try:
-            order = self.trader.buy(analysis.buy, self.coin, volumes_wanted.get('buy'), asks.get(analysis.buy)[0])
+            order = self.trader.buy(market, self.coin, volume, rate)
         except:
-            logger.exception("Failed to buy {} on {}".format(self.coin, analysis.buy))
+            logger.exception("Failed to buy {} on {}".format(self.coin, market))
             return None
 
         logger.debug(order)
 
-        if not self.analyser.is_filled(order, analysis.buy):
-            return self._handle_miss_buy(order, analysis.buy)
+        if not Analyser.is_filled(order, market):
+            return self._handle_miss_buy(order, market)
 
-        return Trader.fill_buy_sell_order(order, analysis.buy)
+        return Trader.fill_buy_sell_order(order, market)
 
     def _handle_miss_sell(self, order, analysis, asks):
         # Check each second if sold until timeout
@@ -323,7 +324,7 @@ class Balance(object):
                     continue
 
                 # Buy
-                buy_order = self._buy(analysis, volumes_wanted, asks)
+                buy_order = self._buy(analysis.buy, volumes_wanted.get('buy'), asks.get(analysis.buy)[0])
                 if buy_order is None:
                     continue
 

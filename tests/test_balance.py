@@ -15,7 +15,6 @@ from database.models.markets import Markets
 from database.models.status import Status
 from tests.orders import *
 from dynaconf import settings
-from dynaconf.utils.boxing import DynaBox
 
 ETH = "ETH"
 COIN = "TRX"
@@ -97,14 +96,11 @@ class TestBalance(unittest.TestCase):
         assert self.strategy.balance_coin.get(BINANCE) == AMOUNT_COIN
 
     # TESTS BUY
-    def test_buy_filled(self):
+    @mock.patch('strategies.analyser.Analyser.is_filled', return_value=True)
+    def test_buy_filled(self, mock_filled):
         self.mock_trader.buy.return_value = LIQUI_BUY_ORDER
-        self.mock_analyser.is_filled.return_value = True
 
-        analysis = Analysis(LIQUI, BINANCE, EXPOSURE)
-        volumes_wanted = {'buy': ORDER_AMOUNT}
-        asks = {LIQUI: [PRICE_ASK]}
-        order = self.strategy._buy(analysis, volumes_wanted, asks)
+        order = self.strategy._buy(LIQUI, ORDER_AMOUNT, PRICE_ASK)
 
         self.mock_trader.buy.assert_called_once_with(LIQUI, COIN, ORDER_AMOUNT, PRICE_ASK)
         self.mock_trader.cancel_order.assert_not_called()
@@ -113,26 +109,20 @@ class TestBalance(unittest.TestCase):
     def test_buy_exception(self):
         self.mock_trader.buy.side_effect = Exception('timeout')
 
-        analysis = Analysis(LIQUI, BINANCE, EXPOSURE)
-        volumes_wanted = {'buy': ORDER_AMOUNT}
-        asks = {LIQUI: [PRICE_ASK]}
-        order = self.strategy._buy(analysis, volumes_wanted, asks)
+        order = self.strategy._buy(LIQUI, ORDER_AMOUNT, PRICE_ASK)
 
         self.mock_trader.buy.assert_called_once_with(LIQUI, COIN, ORDER_AMOUNT, PRICE_ASK)
         assert order is None
 
-    def test_miss_buy(self):
+    @mock.patch('strategies.analyser.Analyser.is_filled', return_value=False)
+    def test_miss_buy(self, mock_filled):
         self.mock_trader.buy.return_value = LIQUI_BUY_ORDER
-        self.mock_analyser.is_filled.return_value = False
         self.strategy._handle_miss_buy = mock.Mock(return_value=Trader.fill_fetch_order(LIQUI_FETCH_BUY_ORDER, LIQUI))
 
-        analysis = Analysis(LIQUI, BINANCE, EXPOSURE)
-        volumes_wanted = {'buy': ORDER_AMOUNT}
-        asks = {LIQUI: [PRICE_ASK]}
-        order = self.strategy._buy(analysis, volumes_wanted, asks)
+        order = self.strategy._buy(LIQUI, ORDER_AMOUNT, PRICE_ASK)
 
         self.mock_trader.buy.assert_called_once_with(LIQUI, COIN, ORDER_AMOUNT, PRICE_ASK)
-        self.strategy._handle_miss_buy.assert_called_once_with(LIQUI_BUY_ORDER, analysis.buy)
+        self.strategy._handle_miss_buy.assert_called_once_with(LIQUI_BUY_ORDER, LIQUI)
         assert order.id == BUY_ORDER_ID
 
     # TESTS HANDLE MISS BUY
