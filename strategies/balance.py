@@ -93,8 +93,8 @@ class Balance(object):
                 balance_coin = BalanceModel(transaction, market, Coins[self.coin], self.balance_coin.get(market))
                 self.db.upsert_balance(balance_coin)
 
-        logger.debug("Total ETH: {}".format(sum([self.balance_eth.get(i) for i in self.markets])))
-        logger.debug("Total {}: {}".format(self.coin, sum([self.balance_coin.get(i) for i in self.markets])))
+        #logger.debug("Total ETH: {}".format(sum([self.balance_eth.get(i) for i in self.markets])))
+        #logger.debug("Total {}: {}".format(self.coin, sum([self.balance_coin.get(i) for i in self.markets])))
 
         return True
 
@@ -298,7 +298,7 @@ class Balance(object):
 
                 if volumes_wanted is None:
                     update_balance = True
-                    time.sleep(2)
+                    time.sleep(0.05)
                     continue
 
                 # Check pending sells
@@ -375,4 +375,4 @@ class Balance(object):
                 break
 
             # Sleep
-            time.sleep(0.1)
+            time.sleep(0.05)

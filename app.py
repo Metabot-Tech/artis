@@ -37,6 +37,7 @@ def main():
         strategy.run()
         logger.info("Finished running current strategy")
     except:
+        logger.exception("")
         reporter.error("I am dead, please revive me!")
 
 if __name__ == '__main__':
