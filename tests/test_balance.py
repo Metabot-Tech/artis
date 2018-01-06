@@ -158,6 +158,18 @@ class TestBalance(unittest.TestCase):
         self.mock_trader.fetch_order.assert_called_with(LIQUI, COIN, BUY_ORDER_ID)
         assert order.id == BUY_ORDER_ID
 
+    @mock.patch('time.sleep', return_value=None)
+    def test_handle_miss_buy_cancel_partial_order(self, mock_sleep):
+        self.mock_trader.cancel_order.side_effect = Exception('Order does not exist')
+        self.mock_trader.fetch_order.return_value = LIQUI_FETCH_PARTIAL_BUY_ORDER
+
+        order = self.strategy._handle_miss_buy(LIQUI_BUY_ORDER, LIQUI)
+
+        self.mock_trader.cancel_order.assert_called_once_with(LIQUI, COIN, BUY_ORDER_ID)
+        self.mock_trader.fetch_order.assert_called_with(LIQUI, COIN, BUY_ORDER_ID)
+        assert order.id == BUY_ORDER_ID
+        assert order.remaining_amount > 0
+
     # TESTS SELL
     def test_sell_filled(self):
         self.mock_trader.sell.return_value = BINANCE_SELL_ORDER

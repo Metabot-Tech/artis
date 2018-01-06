@@ -93,9 +93,6 @@ class Balance(object):
                 balance_coin = BalanceModel(transaction, market, Coins[self.coin], self.balance_coin.get(market))
                 self.db.upsert_balance(balance_coin)
 
-        #logger.debug("Total ETH: {}".format(sum([self.balance_eth.get(i) for i in self.markets])))
-        #logger.debug("Total {}: {}".format(self.coin, sum([self.balance_coin.get(i) for i in self.markets])))
-
         return True
 
     def _handle_miss_buy(self, order, market):
@@ -330,16 +327,14 @@ class Balance(object):
                 if buy_order is None:
                     continue
 
-                if buy_order.executed_amount == 0:
+                if buy_order.executed_amount > settings.MINIMUM_AMOUNT_TO_TRADE/bids.get(analysis.sell)[0]:
+                    exposure = 1 + (analysis.exposure - 1) / 2
+                    volumes_wanted['sell'] = round(buy_order.executed_amount / exposure)
+                else:
+                    self.reporter.error("Buy miss {} on {} not big enough to sell, executed: {}".format(buy_order.id,
+                                                                                                        buy_order.market,
+                                                                                                        buy_order.executed_amount))
                     continue
-
-                if buy_order.remaining_amount > 0:
-                    if buy_order.remaining_amount > settings.MINIMUM_AMOUNT_TO_TRADE/bids.get(analysis.sell)[0]:
-                        volumes_wanted['sell'] = round(buy_order.executed_amount / analysis.exposure)
-                    else:
-                        self.reporter.error("Buy miss {} on {} not big enough to sell, remaining: {}".format(buy_order.id,
-                                                                                                             buy_order.market,
-                                                                                                             buy_order.remaining_amount))
 
                 logger.info("Successfully performed buy order: {}".format(buy_order.id))
 

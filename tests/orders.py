@@ -186,3 +186,28 @@ BINANCE_FETCH_CANCELED_SELL_ORDER = {
     'timestamp': 1514962677490,
     'type': 'limit'
 }
+
+LIQUI_FETCH_PARTIAL_BUY_ORDER = {
+    'amount': 613.0,
+    'cost': 1.8861201261603637e-05,
+    'datetime': '2018-01-06T18:26:28.000Z',
+    'fee': None,
+    'filled': 0.11595476000002236,
+    'id': '183892657',
+    'info': {
+        'amount': 612.88404524,
+        'id': '183892657',
+        'pair': 'trx_eth',
+        'rate': 0.00016266,
+        'start_amount': 613.0,
+        'status': 3,
+        'timestamp_created': 1515263188,
+        'type': 'buy'},
+    'price': 0.00016266,
+    'remaining': 612.88404524,
+    'side': 'buy',
+    'status': 'canceled',
+    'symbol': 'TRX/ETH',
+    'timestamp': 1515263188000,
+    'type': 'limit'
+}
