@@ -37,6 +37,7 @@ SMALL_VOLUME_BUY = 100
 VOLUME_SELL = 500
 SMALL_VOLUME_SELL = 110
 SERVICE_FEE = 0.001
+SELL_PRICE = 8.762e-05
 
 
 class AsyncMock(mock.MagicMock):
@@ -241,7 +242,7 @@ class TestBalance(unittest.TestCase):
         self.mock_trader.fetch_order.assert_called_with(BINANCE, COIN, SELL_ORDER_ID)
         self.mock_trader.cancel_order.assert_called_once_with(BINANCE, COIN, SELL_ORDER_ID)
         self.mock_trader.sell.assert_called_once_with(BINANCE, COIN, cancelled_order.remaining_amount,
-                                                      PRICE_ASK*self.strategy._sell_miss_percentage)
+                                                      SELL_PRICE*self.strategy._sell_miss_percentage)
         assert done is True
         assert order.id == ANOTHER_ORDER_ID
         assert cancelled_order.id == SELL_ORDER_ID
