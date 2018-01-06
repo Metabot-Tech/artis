@@ -54,9 +54,9 @@ class Balance(object):
         for sell in sells:
             order = self.trader.fetch_order(sell.market.name, sell.coin.name, sell.order_id)
             order = Trader.fill_fetch_order(order, sell.market.name)
-            if order.status == Status.DONE:
+            if order.status != Status.ONGOING:
                 pending_sells -= 1
-                sell.status = Status.DONE
+                sell.status = order.status
                 self.db.upsert_trade(sell)
 
         logger.debug("Pending sells remaining: {}".format(pending_sells))
@@ -158,7 +158,14 @@ class Balance(object):
         self.reporter.warning("Trade miss when selling {} on {}. Cancelling order: {}".format(self.coin,
                                                                                               analysis.sell,
                                                                                               order.get("id")))
-        cancellation = self.trader.cancel_order(analysis.sell, self.coin, order.get("id"))
+
+        try:
+            cancellation = self.trader.cancel_order(analysis.sell, self.coin, order.get("id"))
+        except:
+            logger.exception("Failed to cancel order: {}".format(order.get('id')))
+            fetched_order = self.trader.fetch_order(analysis.sell, self.coin, order.get("id"))
+            fetched_order = Trader.fill_fetch_order(fetched_order, analysis.sell)
+            return True, fetched_order, None
         logger.debug(cancellation)
 
         # Create new order at market price
