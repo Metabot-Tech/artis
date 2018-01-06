@@ -32,6 +32,7 @@ SELL_ORDER_ID = '5256209'
 ANOTHER_ORDER_ID = '6183482'
 ORDER_AMOUNT = 5000
 EXPOSURE = 1.057692308
+HALF_EXPOSURE = 1 + (EXPOSURE - 1)/2
 VOLUME_BUY = 600
 SMALL_VOLUME_BUY = 100
 VOLUME_SELL = 500
@@ -71,6 +72,17 @@ class TestBalance(unittest.TestCase):
 
         self.mock_database.upsert_trade.assert_called_once()
         assert trade.status == Status.DONE
+        assert pending_sells == 0
+
+    def test_update_pending_canceled_sells(self):
+        trade = Trade(None, Markets[BINANCE], Types.SELL, Coins[COIN], AMOUNT_COIN, PRICE_ASK, BUY_ORDER_ID, Status.ONGOING)
+        self.mock_database.fetch_pending_sells.return_value = [trade]
+        self.mock_trader.fetch_order.return_value = BINANCE_FETCH_CANCELED_SELL_ORDER
+
+        pending_sells = self.strategy._update_pending_sells()
+
+        self.mock_database.upsert_trade.assert_called_once()
+        assert trade.status == Status.CANCELLED
         assert pending_sells == 0
 
     def test_update_balance_without_transaction(self):
@@ -232,6 +244,22 @@ class TestBalance(unittest.TestCase):
         assert order.id == ANOTHER_ORDER_ID
         assert cancelled_order.id == SELL_ORDER_ID
 
+    @mock.patch('time.sleep', return_value=None)
+    def test_handle_miss_sell_too_small_amount_to_cancel(self, mock_sleep):
+        settings.MINIMUM_AMOUNT_TO_TRADE = 0.01
+        initial_order = {'id': SELL_ORDER_ID}
+        self.mock_trader.fetch_order.return_value = BINANCE_FETCH_NEW_SELL_ORDER
+
+        analysis = Analysis(LIQUI, BINANCE, EXPOSURE)
+        asks = {BINANCE: [PRICE_ASK]}
+        done, order, cancelled_order = self.strategy._handle_miss_sell(initial_order, analysis, asks)
+
+        self.mock_trader.fetch_order.assert_called_with(BINANCE, COIN, SELL_ORDER_ID)
+        self.mock_trader.cancel_order.assert_not_called()
+        assert done is True
+        assert order.id == SELL_ORDER_ID
+        assert cancelled_order is None
+
     def test_handle_miss_sell_cancellation_exception(self):
         pass
 
@@ -250,7 +278,7 @@ class TestBalance(unittest.TestCase):
         volumes_wanted = self.strategy._get_trade_volumes(asks, bids, analysis)
 
         assert volumes_wanted.get('buy') == round(settings.AMOUNT_TO_TRADE / PRICE_ASK)
-        assert volumes_wanted.get('sell') == round(settings.AMOUNT_TO_TRADE / PRICE_BID)
+        assert volumes_wanted.get('sell') == round(volumes_wanted.get('buy') / HALF_EXPOSURE)
 
     def test_get_trade_volumes_ask_too_small(self):
         self.strategy.balance_eth = {"LIQUI": 1, "BINANCE": 1}
@@ -263,7 +291,7 @@ class TestBalance(unittest.TestCase):
         volumes_wanted = self.strategy._get_trade_volumes(asks, bids, analysis)
 
         assert volumes_wanted.get('buy') == SMALL_VOLUME_BUY
-        assert volumes_wanted.get('sell') == round(SMALL_VOLUME_BUY / EXPOSURE)
+        assert volumes_wanted.get('sell') == round(SMALL_VOLUME_BUY / HALF_EXPOSURE)
 
     def test_get_trade_volumes_bid_too_small(self):
         self.strategy.balance_eth = {"LIQUI": 1, "BINANCE": 1}
@@ -275,7 +303,7 @@ class TestBalance(unittest.TestCase):
 
         volumes_wanted = self.strategy._get_trade_volumes(asks, bids, analysis)
 
-        assert volumes_wanted.get('buy') == round(SMALL_VOLUME_SELL * EXPOSURE)
+        assert volumes_wanted.get('buy') == round(SMALL_VOLUME_SELL * HALF_EXPOSURE)
         assert volumes_wanted.get('sell') == SMALL_VOLUME_SELL
 
     def test_get_trade_volumes_wallet_eth_too_small(self):
@@ -289,7 +317,7 @@ class TestBalance(unittest.TestCase):
         volumes_wanted = self.strategy._get_trade_volumes(asks, bids, analysis)
 
         assert volumes_wanted.get('buy') == round(SMALL_AMOUNT_ETH / PRICE_ASK)
-        assert volumes_wanted.get('sell') == round(SMALL_AMOUNT_ETH / PRICE_ASK / EXPOSURE)
+        assert volumes_wanted.get('sell') == round(volumes_wanted.get('buy') / HALF_EXPOSURE)
 
     def test_get_trade_volumes_wallet_coin_too_small(self):
         self.strategy.balance_eth = {"LIQUI": 1, "BINANCE": 1}
@@ -301,7 +329,7 @@ class TestBalance(unittest.TestCase):
 
         volumes_wanted = self.strategy._get_trade_volumes(asks, bids, analysis)
 
-        assert volumes_wanted.get('buy') == round(SMALL_AMOUNT_COIN * EXPOSURE)
+        assert volumes_wanted.get('buy') == round(SMALL_AMOUNT_COIN * HALF_EXPOSURE)
         assert volumes_wanted.get('sell') == round(SMALL_AMOUNT_COIN)
 
     def test_get_trade_volumes_wallet_eth_below_minimum(self):
@@ -342,7 +370,7 @@ class TestBalance(unittest.TestCase):
         volumes_wanted = self.strategy._get_trade_volumes(asks, bids, analysis)
 
         assert volumes_wanted.get('buy') == round(settings.AMOUNT_TO_TRADE / PRICE_ASK * (1 - SERVICE_FEE))
-        assert volumes_wanted.get('sell') == round(settings.AMOUNT_TO_TRADE / PRICE_BID * (1 - SERVICE_FEE))
+        assert volumes_wanted.get('sell') == round(settings.AMOUNT_TO_TRADE / PRICE_ASK / HALF_EXPOSURE * (1 - SERVICE_FEE))
 
 
 

@@ -154,3 +154,35 @@ BINANCE_FETCH_NEW_SELL_ORDER = {
     'timestamp': 1514962677490,
     'type': 'limit'
 }
+
+
+BINANCE_FETCH_CANCELED_SELL_ORDER = {
+    'amount': 192.0,
+    'cost': 0.01682304,
+    'datetime': '2018-01-03T06:57:57.490Z',
+    'fee': None,
+    'filled': 192.0,
+    'id': '5256209',
+    'info': {
+        'clientOrderId': '1hr4NbO0tBuyQ7CiLUV85f',
+        'executedQty': '172.00000000',
+        'icebergQty': '0.00000000',
+        'isWorking': True,
+        'orderId': 5256209,
+        'origQty': '192.00000000',
+        'price': '0.00008762',
+        'side': 'SELL',
+        'status': 'CANCELED',
+        'stopPrice': '0.00000000',
+        'symbol': 'TRXETH',
+        'time': 1514962677490,
+        'timeInForce': 'GTC',
+        'type': 'LIMIT'},
+    'price': 8.762e-05,
+    'remaining': 0.0,
+    'side': 'sell',
+    'status': 'closed',
+    'symbol': 'TRX/ETH',
+    'timestamp': 1514962677490,
+    'type': 'limit'
+}

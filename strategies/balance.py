@@ -154,6 +154,13 @@ class Balance(object):
                 return True, fetched_order, None
             time.sleep(1)
 
+        # Check if remaining is big enough to create new order
+        if fetched_order.remaining_amount < settings.MINIMUM_AMOUNT_TO_TRADE/asks.get(analysis.sell)[0]:
+            self.reporter.warning("Trade miss when selling {} on {}. Remaining too small to cancel: {}".format(self.coin,
+                                                                                                               analysis.sell,
+                                                                                                               order.get("id")))
+            return True, fetched_order, None
+
         # If not sold, cancel order
         self.reporter.warning("Trade miss when selling {} on {}. Cancelling order: {}".format(self.coin,
                                                                                               analysis.sell,
@@ -199,6 +206,9 @@ class Balance(object):
         return True, Trader.fill_buy_sell_order(order, analysis.sell), None
 
     def _get_trade_volumes(self, asks, bids, analysis, rounding=0):
+        # Balance profit
+        exposure = 1 + (analysis.exposure - 1) / 2
+
         # Check available volume
         volumes = {
             'ask': asks.get(analysis.buy)[1],
@@ -212,19 +222,19 @@ class Balance(object):
 
         volumes_wanted = {
             'buy': round(settings.AMOUNT_TO_TRADE / asks.get(analysis.buy)[0], 6),
-            'sell': round(settings.AMOUNT_TO_TRADE / bids.get(analysis.sell)[0], 6)
+            'sell': round(settings.AMOUNT_TO_TRADE / asks.get(analysis.buy)[0] / exposure, 6)
         }
 
         # Ask too small
         if volumes.get('ask') < volumes_wanted.get('buy'):
             volumes_wanted['buy'] = volumes.get('ask')
-            volumes_wanted['sell'] = volumes.get('ask') / analysis.exposure
+            volumes_wanted['sell'] = volumes.get('ask') / exposure
             logger.debug("Ask too small, reducing sell to {} and buy to {}".format(volumes_wanted['sell'],
                                                                                    volumes_wanted['buy']))
 
         # Bid too small
         if volumes.get('bid') < volumes_wanted.get('sell'):
-            volumes_wanted['buy'] = volumes.get('bid') * analysis.exposure
+            volumes_wanted['buy'] = volumes.get('bid') * exposure
             volumes_wanted['sell'] = volumes.get('bid')
             logger.debug("Bid too small, reducing sell to {} and buy to {}".format(volumes_wanted['sell'],
                                                                                    volumes_wanted['buy']))
@@ -236,7 +246,7 @@ class Balance(object):
                 return None
             else:
                 volumes_wanted['sell'] = self.balance_coin.get(analysis.sell)
-                volumes_wanted['buy'] = volumes_wanted.get('sell') * analysis.exposure
+                volumes_wanted['buy'] = volumes_wanted.get('sell') * exposure
                 logger.debug("No enough coin in wallet, reducing sell to {} and buy to {}".format(volumes_wanted['sell'],
                                                                                                   volumes_wanted['buy']))
 
@@ -247,7 +257,7 @@ class Balance(object):
                 return None
             else:
                 volumes_wanted['buy'] = self.balance_eth.get(analysis.buy) / prices.get('ask')
-                volumes_wanted['sell'] = volumes_wanted['buy'] / analysis.exposure
+                volumes_wanted['sell'] = volumes_wanted['buy'] / exposure
                 logger.debug("No enough eth in wallet, reducing sell to {} and buy to {}".format(volumes_wanted['sell'],
                                                                                                  volumes_wanted['buy']))
 
