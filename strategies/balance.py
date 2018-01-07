@@ -26,7 +26,7 @@ class Balance(object):
     _max_pending_sells = 5
     _sell_timeout = 5
     _buy_timeout = 4
-    _sell_miss_percentage = 0.998
+    _sell_miss_percentage = 0.996
 
     def __init__(self, coin, market1, market2, trader, analyser, reporter, database, helper):
         self.trader = trader
