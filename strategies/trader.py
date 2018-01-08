@@ -52,7 +52,7 @@ class Trader(object):
         new_profit = current_profit * (1 - settings.PROFIT_REDUCTION / minimum_profit)
         new_exposure = round(1 + new_profit, 6)
 
-        logger.debug("New exposure: {}".format(new_exposure))
+        logger.info("New exposure: {}".format(new_exposure))
 
         return new_exposure
 

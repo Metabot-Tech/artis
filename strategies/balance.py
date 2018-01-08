@@ -59,7 +59,7 @@ class Balance(object):
                 sell.status = order.status
                 self.db.upsert_trade(sell)
 
-        logger.debug("Pending sells remaining: {}".format(pending_sells))
+        logger.info("Pending sells remaining: {}".format(pending_sells))
 
         return pending_sells
 
@@ -387,6 +387,3 @@ class Balance(object):
 
                 update_balance = True
                 break
-
-            # Sleep
-            time.sleep(0.05)
