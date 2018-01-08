@@ -45,6 +45,18 @@ class Trader(object):
             value.load_markets()
 
     @staticmethod
+    def new_exposure(exposure):
+        current_profit = exposure - 1
+        minimum_profit = settings.PROFIT_FACTOR - 1
+
+        new_profit = current_profit * (1 - settings.PROFIT_REDUCTION / minimum_profit)
+        new_exposure = round(1 + new_profit, 6)
+
+        logger.debug("New exposure: {}".format(new_exposure))
+
+        return new_exposure
+
+    @staticmethod
     def fill_buy_sell_order(order, market):
         return Order(market,
                      order.get('id'),

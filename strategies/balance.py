@@ -26,7 +26,6 @@ class Balance(object):
     _max_pending_sells = 5
     _sell_timeout = 5
     _buy_timeout = 4
-    _sell_miss_percentage = 0.996
 
     def __init__(self, coin, market1, market2, trader, analyser, reporter, database, helper):
         self.trader = trader
@@ -177,7 +176,7 @@ class Balance(object):
         old_order = self.trader.fetch_order(analysis.sell, self.coin, order.get("id"))
         old_order = Trader.fill_fetch_order(old_order, analysis.sell)
         try:
-            new_price = old_order.price*self._sell_miss_percentage
+            new_price = round(old_order.price/Trader.new_exposure(analysis.exposure), 8)
             new_order = self.trader.sell(analysis.sell, self.coin, old_order.remaining_amount, new_price)
         except:
             self.reporter.error("Failed to sell {} on {}, stopping".format(self.coin, analysis.sell))
@@ -193,6 +192,7 @@ class Balance(object):
             order = self.trader.sell(analysis.sell, self.coin, volumes_wanted.get('sell'),
                                      bids.get(analysis.sell)[0])
         except:
+            logger.exception("")
             self.reporter.error("Failed to sell {} on {}, stopping".format(self.coin, analysis.sell))
             return False, None, None
 
