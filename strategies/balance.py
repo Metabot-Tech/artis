@@ -313,7 +313,7 @@ class Balance(object):
                     continue
 
                 # Check available volume
-                volumes_wanted = self._get_trade_volumes(asks, bids, analysis)
+                volumes_wanted = self._get_trade_volumes(asks, bids, analysis, settings.PRECISION)
 
                 if volumes_wanted is None:
                     update_balance = True

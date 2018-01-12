@@ -7,6 +7,7 @@ from strategies.analyser import Analyser
 from strategies.reporter import Reporter
 from strategies.helper import Helper
 from logging.handlers import TimedRotatingFileHandler
+from dynaconf import settings
 
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
@@ -31,7 +32,7 @@ def main():
     reporter = Reporter()
     try:
         logger.info("Creating strategy")
-        strategy = Balance("TRX", "LIQUI", "BINANCE", Trader(), Analyser(), reporter, Database(), Helper())
+        strategy = Balance(settings.COIN, "LIQUI", "BINANCE", Trader(), Analyser(), reporter, Database(), Helper())
 
         logger.info("Start running current strategy")
         strategy.run()
