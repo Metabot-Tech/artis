@@ -22,7 +22,6 @@ class CoinAnalysis(object):
 class Analyser(object):
     _pair = "{}/ETH"
     _LIMIT = "limit"
-    _minimum_order = 0.015  # In ETH
 
     def __init__(self):
         self.liqui = Liqui(settings.LIQUI.API_KEY, settings.LIQUI.API_SECRET)
@@ -37,6 +36,7 @@ class Analyser(object):
                 'secret': settings.BINANCE.API_SECRET
             })
         }
+        self.minimum_order = settings.MINIMUM_AMOUNT_TO_TRADE
 
     def get_coin_analysis(self, coin, origin, destination):
         coin_analysis = CoinAnalysis(coin=coin, origin=origin, destination=destination)
@@ -238,7 +238,7 @@ class Analyser(object):
 
     def extract_good_order(self, orders):
         for order in orders:
-            if order[0]*order[1] > self._minimum_order:
+            if order[0]*order[1] > self.minimum_order:
                 return order
         logger.error("No good order found")
         return [orders[0][0], 0]

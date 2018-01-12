@@ -168,7 +168,7 @@ class TestAnalyser(unittest.TestCase):
         assert order[1] == VOLUME
 
     def test_extract_no_good_order(self):
-        depth = [[PRICE, 20]]
+        depth = [[PRICE, 1]]
         analyser = Analyser()
 
         order = analyser.extract_good_order(depth)
