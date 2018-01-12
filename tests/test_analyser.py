@@ -1,15 +1,22 @@
 import unittest
+import os
 from tests.orders import *
 from strategies.analyser import Analyser
 from database.models.types import Types
 from database.models.status import Status
+from dynaconf import settings
 
 LIQUI = "LIQUI"
 BINANCE = "BINANCE"
 TOTO = "TOTO"
+PRICE = 0.000085
+VOLUME = 10000
 
 
 class TestAnalyser(unittest.TestCase):
+    def setUp(self):
+        settings.configure(settings_module=os.path.dirname(os.path.realpath(__file__)) + '/settings.yml')
+
     # TESTS TYPE
     def test_extract_type_liqui(self):
         type = Analyser.extract_type(LIQUI_BUY_ORDER, LIQUI)
@@ -149,3 +156,22 @@ class TestAnalyser(unittest.TestCase):
         status = Analyser.extract_status_order({}, TOTO)
 
         assert status == Status.UNKNOWN
+
+    #TESTS EXTRACT ORDER
+    def test_extract_good_order(self):
+        depth = [[PRICE, VOLUME]]
+        analyser = Analyser()
+
+        order = analyser.extract_good_order(depth)
+
+        assert order[0] == PRICE
+        assert order[1] == VOLUME
+
+    def test_extract_no_good_order(self):
+        depth = [[PRICE, 20]]
+        analyser = Analyser()
+
+        order = analyser.extract_good_order(depth)
+
+        assert order[0] == PRICE
+        assert order[1] == 0

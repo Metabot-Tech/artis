@@ -240,5 +240,5 @@ class Analyser(object):
         for order in orders:
             if order[0]*order[1] > self._minimum_order:
                 return order
-        logger.error("No good order found, returning first one")
-        return orders[0]
+        logger.error("No good order found")
+        return [orders[0][0], 0]

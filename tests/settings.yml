@@ -1,0 +1,11 @@
+DYNACONF:
+  AMOUNT_TO_TRADE: 0.02
+  MINIMUM_AMOUNT_TO_TRADE: 0.001
+  LIQUI:
+    API_KEY: dsfsdbkjfbsdkjbfsdbkjds
+    API_SECRET: fsjdkbvdskjbvdsjkbvjksfbvk
+    SERVICE_FEE_HIGH: 0
+  BINANCE:
+    API_KEY: ksbvdskjbdskjbfkjsdbfjk
+    API_SECRET: dnfsdknfkdsnfdasmdbkjsabdjk
+    SERVICE_FEE_HIGH: 0

@@ -225,6 +225,8 @@ class Balance(object):
 
         # Ask too small
         if volumes.get('ask') < volumes_wanted.get('buy'):
+            if volumes.get('ask') == 0:
+                return None
             volumes_wanted['buy'] = volumes.get('ask')
             volumes_wanted['sell'] = volumes.get('ask') / exposure
             logger.debug("Ask too small, reducing sell to {} and buy to {}".format(volumes_wanted['sell'],
@@ -232,6 +234,8 @@ class Balance(object):
 
         # Bid too small
         if volumes.get('bid') < volumes_wanted.get('sell'):
+            if volumes.get('bid') == 0:
+                return None
             volumes_wanted['buy'] = volumes.get('bid') * exposure
             volumes_wanted['sell'] = volumes.get('bid')
             logger.debug("Bid too small, reducing sell to {} and buy to {}".format(volumes_wanted['sell'],

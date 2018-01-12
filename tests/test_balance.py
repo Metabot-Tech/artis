@@ -377,6 +377,20 @@ class TestBalance(unittest.TestCase):
         assert volumes_wanted.get('buy') == round(settings.AMOUNT_TO_TRADE / PRICE_ASK * (1 - SERVICE_FEE))
         assert volumes_wanted.get('sell') == round(settings.AMOUNT_TO_TRADE / PRICE_ASK / HALF_EXPOSURE * (1 - SERVICE_FEE))
 
+    def test_get_trade_volumes_zero_ask_volume(self):
+        asks = {LIQUI: [PRICE_ASK, 0]}
+        bids = {BINANCE: [PRICE_BID, VOLUME_SELL]}
+        analysis = Analysis(LIQUI, BINANCE, EXPOSURE)
 
+        volumes_wanted = self.strategy._get_trade_volumes(asks, bids, analysis)
 
+        assert volumes_wanted is None
 
+    def test_get_trade_volumes_zero_bid_volume(self):
+        asks = {LIQUI: [PRICE_ASK, VOLUME_BUY]}
+        bids = {BINANCE: [PRICE_BID, 0]}
+        analysis = Analysis(LIQUI, BINANCE, EXPOSURE)
+
+        volumes_wanted = self.strategy._get_trade_volumes(asks, bids, analysis)
+
+        assert volumes_wanted is None
