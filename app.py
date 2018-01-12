@@ -17,7 +17,7 @@ logFormatter = logging.Formatter("%(asctime)s %(name)-40s %(levelname)-8s %(mess
 rootLogger = logging.getLogger()
 rootLogger.setLevel(logging.DEBUG)
 
-fileHandler = TimedRotatingFileHandler("logs/artis.log", when="midnight", interval=1)
+fileHandler = TimedRotatingFileHandler("logs/artis{}.log".format(settings.SERVICE_NUMBER), when="midnight", interval=1)
 fileHandler.setFormatter(logFormatter)
 rootLogger.addHandler(fileHandler)
 
