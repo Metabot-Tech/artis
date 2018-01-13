@@ -9,17 +9,6 @@ services:
      - ./data/postgresql/data:/var/lib/postgresql/data
     env_file:
       - .env
-  metabase:
-    restart: always
-    ports:
-     - 3000:3000
-    image: metabase/metabase
-    volumes:
-     - ./data/metabase:/metabase
-    environment:
-     - MB_DB_FILE=/metabase/metabase.db
-    depends_on:
-      - database
   service:
     build: ./
     env_file:
