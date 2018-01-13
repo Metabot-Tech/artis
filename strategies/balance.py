@@ -332,15 +332,16 @@ class Balance(object):
                 if buy_order is None:
                     continue
 
-                if buy_order.executed_amount > settings.MINIMUM_AMOUNT_TO_TRADE/bids.get(analysis.sell)[0]:
-                    exposure = 1 + (analysis.exposure - 1) / 2
-                    volumes_wanted['sell'] = round(buy_order.executed_amount / exposure)
-                else:
-                    if buy_order.executed_amount > 0:
-                        self.reporter.error("Buy miss {} on {} not big enough to sell, executed: {}".format(buy_order.id,
-                                                                                                            buy_order.market,
-                                                                                                            buy_order.executed_amount))
-                    continue
+                if buy_order.remaining_amount > 0:
+                    if buy_order.executed_amount > settings.MINIMUM_AMOUNT_TO_TRADE/bids.get(analysis.sell)[0]:
+                        exposure = 1 + (analysis.exposure - 1) / 2
+                        volumes_wanted['sell'] = round(buy_order.executed_amount / exposure, settings.PRECISION)
+                    else:
+                        if buy_order.executed_amount > 0:
+                            self.reporter.error("Buy miss {} on {} not big enough to sell, executed: {}".format(buy_order.id,
+                                                                                                                buy_order.market,
+                                                                                                                buy_order.executed_amount))
+                        continue
 
                 logger.info("Successfully performed buy order: {}".format(buy_order.id))
 
