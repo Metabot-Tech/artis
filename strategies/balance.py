@@ -391,3 +391,6 @@ class Balance(object):
 
                 update_balance = True
                 break
+
+            if settings.SLEEP_TIME > 0:
+                time.sleep(settings.SLEEP_TIME)
