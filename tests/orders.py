@@ -133,7 +133,7 @@ BINANCE_FETCH_NEW_SELL_ORDER = {
     'id': '5256209',
     'info': {
         'clientOrderId': '1hr4NbO0tBuyQ7CiLUV85f',
-        'executedQty': '172.00000000',
+        'executedQty': '92.00000000',
         'icebergQty': '0.00000000',
         'isWorking': True,
         'orderId': 5256209,

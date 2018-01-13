@@ -9,3 +9,6 @@ DYNACONF:
     API_KEY: ksbvdskjbdskjbfkjsdbfjk
     API_SECRET: dnfsdknfkdsnfdasmdbkjsabdjk
     SERVICE_FEE_HIGH: 0
+  PROFIT_FACTOR: 1.0135
+  PROFIT_REDUCTION: 0.005
+  PRECISION: 0

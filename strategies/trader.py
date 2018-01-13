@@ -57,6 +57,17 @@ class Trader(object):
         return new_exposure
 
     @staticmethod
+    def profit_reduction(exposure):
+        current_profit = exposure - 1
+        minimum_profit = settings.PROFIT_FACTOR - 1
+
+        reduction = round(current_profit * settings.PROFIT_REDUCTION / minimum_profit, 10)
+
+        logger.info("Profit reduction: {}".format(reduction))
+
+        return reduction
+
+    @staticmethod
     def fill_buy_sell_order(order, market):
         return Order(market,
                      order.get('id'),

@@ -26,6 +26,8 @@ class Balance(object):
     _max_pending_sells = 5
     _sell_timeout = 5
     _buy_timeout = 4
+    _price_precision = 8
+    _base_amount_precision = 6
 
     def __init__(self, coin, market1, market2, trader, analyser, reporter, database, helper):
         self.trader = trader
@@ -176,8 +178,10 @@ class Balance(object):
         old_order = self.trader.fetch_order(analysis.sell, self.coin, order.get("id"))
         old_order = Trader.fill_fetch_order(old_order, analysis.sell)
         try:
-            new_price = round(old_order.price/Trader.new_exposure(analysis.exposure), 8)
-            new_order = self.trader.sell(analysis.sell, self.coin, old_order.remaining_amount, new_price)
+            reduction = Trader.profit_reduction(analysis.exposure)
+            new_price = round(old_order.price * (1 - reduction), self._price_precision)
+            new_amount = round(old_order.remaining_amount * (1 + reduction/2), settings.PRECISION)
+            new_order = self.trader.sell(analysis.sell, self.coin, new_amount, new_price)
         except:
             self.reporter.error("Failed to sell {} on {}, stopping".format(self.coin, analysis.sell))
             logger.exception("")
@@ -219,8 +223,8 @@ class Balance(object):
         }
 
         volumes_wanted = {
-            'buy': round(settings.AMOUNT_TO_TRADE / asks.get(analysis.buy)[0], 6),
-            'sell': round(settings.AMOUNT_TO_TRADE / asks.get(analysis.buy)[0] / exposure, 6)
+            'buy': round(settings.AMOUNT_TO_TRADE / asks.get(analysis.buy)[0], self._base_amount_precision),
+            'sell': round(settings.AMOUNT_TO_TRADE / asks.get(analysis.buy)[0] / exposure, self._base_amount_precision)
         }
 
         # Ask too small

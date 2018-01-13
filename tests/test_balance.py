@@ -38,7 +38,6 @@ VOLUME_SELL = 500
 SMALL_VOLUME_SELL = 110
 SERVICE_FEE = 0.001
 SELL_PRICE = 8.762e-05
-NEW_EXPOSURE = 1.0085
 
 
 class AsyncMock(mock.MagicMock):
@@ -231,8 +230,7 @@ class TestBalance(unittest.TestCase):
         pass
 
     @mock.patch('time.sleep', return_value=None)
-    @mock.patch('strategies.trader.Trader.new_exposure', return_value=NEW_EXPOSURE)
-    def test_handle_miss_sell_cancellation(self, mock_sleep, mock_new_exposure):
+    def test_handle_miss_sell_cancellation(self, mock_sleep):
         initial_order = {'id': SELL_ORDER_ID}
         self.mock_trader.fetch_order.return_value = BINANCE_FETCH_NEW_SELL_ORDER
         self.mock_trader.sell.return_value = BINANCE_ANOTHER_SELL_ORDER
@@ -243,8 +241,7 @@ class TestBalance(unittest.TestCase):
 
         self.mock_trader.fetch_order.assert_called_with(BINANCE, COIN, SELL_ORDER_ID)
         self.mock_trader.cancel_order.assert_called_once_with(BINANCE, COIN, SELL_ORDER_ID)
-        self.mock_trader.sell.assert_called_once_with(BINANCE, COIN, cancelled_order.remaining_amount,
-                                                      round(SELL_PRICE/NEW_EXPOSURE, 8))
+        self.mock_trader.sell.assert_called_once_with(BINANCE, COIN, 101, 0.00008575)
         assert done is True
         assert order.id == ANOTHER_ORDER_ID
         assert cancelled_order.id == SELL_ORDER_ID

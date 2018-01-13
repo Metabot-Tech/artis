@@ -20,3 +20,15 @@ class TestTrader(unittest.TestCase):
         exposure = Trader.new_exposure(HIGH_EXPOSURE)
 
         assert exposure == 1.043130
+
+    def test_profit_reduction(self):
+        reduction = Trader.profit_reduction(EXPOSURE)
+
+        assert reduction == 0.005
+
+    def test_profit_reduction_greater(self):
+        reduction = Trader.profit_reduction(HIGH_EXPOSURE)
+
+        print(reduction)
+
+        assert reduction == 0.0253703704
