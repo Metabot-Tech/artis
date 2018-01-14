@@ -97,6 +97,9 @@ class Balance(object):
 
         return True
 
+    def _update_miss_buys(self):
+        buys = self.db.fetch_miss_buys()
+
     def _handle_miss_buy(self, order, market):
         # Check each 250ms if bought until timeout
         for i in range(self._buy_timeout):
@@ -281,6 +284,7 @@ class Balance(object):
         logger.debug("Starting balance strategy of {}".format(self.coin))
         self.running = True
         update_balance = True
+        update_miss_buys = True
         loop = asyncio.get_event_loop()
         transaction = None
         pending_sells = 0
@@ -291,6 +295,11 @@ class Balance(object):
                 if self._update_balance(transaction):
                     update_balance = False
                     transaction = None
+
+            # Update miss buys
+            if update_miss_buys:
+                self._update_miss_buys()
+                update_miss_buys = False
 
             # Get latest prices
             try:
@@ -342,6 +351,19 @@ class Balance(object):
                         volumes_wanted['sell'] = round(buy_order.executed_amount / exposure, settings.PRECISION)
                     else:
                         if buy_order.executed_amount > 0:
+                            update_miss_buys = True
+
+                            transaction = self.db.create_transaction()
+                            buy_trade = Trade(transaction,
+                                              analysis.buy,
+                                              Types.BUY,
+                                              self.coin,
+                                              buy_order.executed_amount,
+                                              buy_order.price,
+                                              buy_order.id,
+                                              Status.MISS)
+                            self.db.upsert_trade(buy_trade)
+
                             self.reporter.error("Buy miss {} on {} not big enough to sell, executed: {}".format(buy_order.id,
                                                                                                                 buy_order.market,
                                                                                                                 buy_order.executed_amount))

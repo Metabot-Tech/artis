@@ -45,6 +45,17 @@ class Database(object):
             session.close()
         return trades
 
+    def fetch_miss_buys(self):
+        session = self.session()
+
+        try:
+            trades = session.query(Trade).filter(Trade.status == Status.MISS).all()
+        except:
+            raise
+        finally:
+            session.close()
+        return trades
+
     def upsert_trade(self, trade):
         return self._upsert_data(trade)
 

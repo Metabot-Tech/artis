@@ -8,3 +8,4 @@ class Status(Enum):
     CANCELLED = auto()  # TODO: Fix typo
     UNKNOWN = auto()
     ERROR = auto()
+    MISS = auto()
