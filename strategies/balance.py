@@ -272,8 +272,8 @@ class Balance(object):
         volumes_wanted['sell'] = volumes_wanted['sell'] * (1 - settings.get(analysis.sell).SERVICE_FEE_HIGH)
 
         # Round
-        volumes_wanted['buy'] = round(volumes_wanted['buy'], rounding)
-        volumes_wanted['sell'] = round(volumes_wanted['sell'], rounding)
+        volumes_wanted['buy'] = Helper.round_down(volumes_wanted['buy'], rounding)
+        volumes_wanted['sell'] = Helper.round_down(volumes_wanted['sell'], rounding)
 
         return volumes_wanted
 
