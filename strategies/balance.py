@@ -28,6 +28,7 @@ class Balance(object):
     _buy_timeout = 4
     _price_precision = 8
     _base_amount_precision = 6
+    _time_between_balance_update = 5
 
     def __init__(self, coin, market1, market2, trader, analyser, reporter, database, helper):
         self.trader = trader
@@ -42,6 +43,9 @@ class Balance(object):
         self.balance_eth = {"LIQUI": 0, "BINANCE": 0}
         self.balance_coin = {"LIQUI": 0, "BINANCE": 0}
         self.opened_orders = 0
+
+        self.update_balance = True
+        self.last_balance_update = 0
 
         # Fill database with base balance if empty
         if self.db.count_transactions() == 0:
@@ -72,6 +76,10 @@ class Balance(object):
 
         :return: Nothing
         """
+        now = time.time()
+        if self.last_balance_update > now - self._time_between_balance_update:
+            return False
+
         loop = asyncio.get_event_loop()
 
         try:
@@ -95,6 +103,7 @@ class Balance(object):
                 balance_coin = BalanceModel(transaction, market, Coins[self.coin], self.balance_coin.get(market))
                 self.db.upsert_balance(balance_coin)
 
+        self.last_balance_update = now
         return True
 
     def _handle_miss_buy(self, order, market):
@@ -249,6 +258,7 @@ class Balance(object):
         if self.balance_coin.get(analysis.sell) < volumes_wanted.get('sell'):
             if self.balance_coin.get(analysis.sell) * prices.get('bid') < settings.MINIMUM_AMOUNT_TO_TRADE:
                 self.reporter.error("Cannot sell, empty {} wallet on {}".format(self.coin, analysis.sell), 3600)
+                self.update_balance = True
                 return None
             else:
                 volumes_wanted['sell'] = self.balance_coin.get(analysis.sell)
@@ -260,6 +270,7 @@ class Balance(object):
         if self.balance_eth.get(analysis.buy) < volumes_wanted.get('buy') * prices.get('ask'):
             if self.balance_eth.get(analysis.buy) < settings.MINIMUM_AMOUNT_TO_TRADE:
                 self.reporter.error("Cannot buy, empty ETH wallet on {}".format(analysis.buy), 3600)
+                self.update_balance = True
                 return None
             else:
                 volumes_wanted['buy'] = self.balance_eth.get(analysis.buy) / prices.get('ask')
@@ -280,16 +291,15 @@ class Balance(object):
     def run(self):
         logger.debug("Starting balance strategy of {}".format(self.coin))
         self.running = True
-        update_balance = True
         loop = asyncio.get_event_loop()
         transaction = None
         pending_sells = 0
 
         while self.running:
             # Update balance
-            if update_balance:
+            if self.update_balance:
                 if self._update_balance(transaction):
-                    update_balance = False
+                    self.update_balance = False
                     transaction = None
 
             # Get latest prices
@@ -320,7 +330,6 @@ class Balance(object):
                 volumes_wanted = self._get_trade_volumes(asks, bids, analysis, settings.PRECISION)
 
                 if volumes_wanted is None:
-                    update_balance = True
                     time.sleep(0.05)
                     continue
 
@@ -394,7 +403,7 @@ class Balance(object):
                                    sell_order.status)
                 self.db.upsert_trade(sell_trade)
 
-                update_balance = True
+                self.update_balance = True
                 break
 
             if settings.SLEEP_TIME > 0:

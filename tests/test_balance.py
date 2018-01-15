@@ -96,6 +96,15 @@ class TestBalance(unittest.TestCase):
         assert self.strategy.balance_coin.get(LIQUI) == AMOUNT_COIN
         assert self.strategy.balance_coin.get(BINANCE) == AMOUNT_COIN
 
+    def test_update_balance_twice(self):
+        self.mock_analyser.get_balance = AsyncMock(return_value={ETH: {"free": AMOUNT_ETH}, COIN: {"free": AMOUNT_COIN}})
+
+        self.strategy._update_balance()
+        status = self.strategy._update_balance()
+
+        self.mock_database.upsert_balance.assert_not_called()
+        assert status is False
+
     # TESTS BUY
     @mock.patch('strategies.analyser.Analyser.is_filled', return_value=True)
     def test_buy_filled(self, mock_filled):
@@ -279,8 +288,8 @@ class TestBalance(unittest.TestCase):
 
         volumes_wanted = self.strategy._get_trade_volumes(asks, bids, analysis)
 
-        assert volumes_wanted.get('buy') == round(settings.AMOUNT_TO_TRADE / PRICE_ASK)
-        assert volumes_wanted.get('sell') == round(volumes_wanted.get('buy') / HALF_EXPOSURE)
+        assert volumes_wanted.get('buy') == Helper.round_down(settings.AMOUNT_TO_TRADE / PRICE_ASK)
+        assert volumes_wanted.get('sell') == Helper.round_down(volumes_wanted.get('buy') / HALF_EXPOSURE)
 
     def test_get_trade_volumes_ask_too_small(self):
         self.strategy.balance_eth = {"LIQUI": 1, "BINANCE": 1}
@@ -318,8 +327,8 @@ class TestBalance(unittest.TestCase):
 
         volumes_wanted = self.strategy._get_trade_volumes(asks, bids, analysis)
 
-        assert volumes_wanted.get('buy') == round(SMALL_AMOUNT_ETH / PRICE_ASK)
-        assert volumes_wanted.get('sell') == round(volumes_wanted.get('buy') / HALF_EXPOSURE)
+        assert volumes_wanted.get('buy') == Helper.round_down(SMALL_AMOUNT_ETH / PRICE_ASK)
+        assert volumes_wanted.get('sell') == Helper.round_down(volumes_wanted.get('buy') / HALF_EXPOSURE)
 
     def test_get_trade_volumes_wallet_coin_too_small(self):
         self.strategy.balance_eth = {"LIQUI": 1, "BINANCE": 1}
@@ -331,8 +340,8 @@ class TestBalance(unittest.TestCase):
 
         volumes_wanted = self.strategy._get_trade_volumes(asks, bids, analysis)
 
-        assert volumes_wanted.get('buy') == round(SMALL_AMOUNT_COIN * HALF_EXPOSURE)
-        assert volumes_wanted.get('sell') == round(SMALL_AMOUNT_COIN)
+        assert volumes_wanted.get('buy') == Helper.round_down(SMALL_AMOUNT_COIN * HALF_EXPOSURE)
+        assert volumes_wanted.get('sell') == Helper.round_down(SMALL_AMOUNT_COIN)
 
     def test_get_trade_volumes_wallet_eth_below_minimum(self):
         self.strategy.balance_eth = {"LIQUI": 0.0005, "BINANCE": 1}
