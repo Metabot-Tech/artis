@@ -356,6 +356,9 @@ class Balance(object):
                                                                                                                 buy_order.executed_amount))
                         continue
 
+                self.balance_coin[analysis.buy] += buy_order.executed_amount
+                self.balance_eth[analysis.buy] -= round(buy_order.executed_amount * buy_order.price, settings.PRECISION)
+
                 logger.info("Successfully performed buy order: {}".format(buy_order.id))
 
                 # Sell
@@ -365,6 +368,9 @@ class Balance(object):
                     logger.error("Currently not handling bad sell, stopping")
                     sys.exit(1)
                 logger.info("Successfully performed sell order: {}".format(sell_order.id))
+
+                self.balance_coin[analysis.sell] -= sell_order.executed_amount
+                self.balance_eth[analysis.sell] += round(sell_order.executed_amount * sell_order.price, settings.PRECISION)
 
                 # Store buy information in database
                 transaction = self.db.create_transaction()
