@@ -39,7 +39,7 @@ def main():
         logger.info("Finished running current strategy")
     except:
         logger.exception("")
-        reporter.error("I am dead, please revive me!")
+        reporter.error("Service {} is dead, please revive it!".format(settings.SERVICE_NUMBER))
 
 if __name__ == '__main__':
     main()
