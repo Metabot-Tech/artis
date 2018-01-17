@@ -261,7 +261,7 @@ class Balance(object):
                 self.update_balance = True
                 return None
             else:
-                volumes_wanted['sell'] = self.balance_coin.get(analysis.sell)
+                volumes_wanted['sell'] = self.balance_coin.get(analysis.sell)*0.99
                 volumes_wanted['buy'] = volumes_wanted.get('sell') * exposure
                 logger.debug("No enough coin in wallet, reducing sell to {} and buy to {}".format(volumes_wanted['sell'],
                                                                                                   volumes_wanted['buy']))
@@ -273,7 +273,7 @@ class Balance(object):
                 self.update_balance = True
                 return None
             else:
-                volumes_wanted['buy'] = self.balance_eth.get(analysis.buy) / prices.get('ask')
+                volumes_wanted['buy'] = self.balance_eth.get(analysis.buy)*0.99 / prices.get('ask')
                 volumes_wanted['sell'] = volumes_wanted['buy'] / exposure
                 logger.debug("No enough eth in wallet, reducing sell to {} and buy to {}".format(volumes_wanted['sell'],
                                                                                                  volumes_wanted['buy']))
