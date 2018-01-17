@@ -309,6 +309,7 @@ class Balance(object):
                 depth = dict(zip(self.markets, depth_results))
             except:
                 logger.error("Market timeout!")
+                time.sleep(1)
                 continue
 
             # Analyse best offer
