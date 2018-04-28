@@ -1,5 +1,4 @@
 import logging
-import time
 import ccxt
 from dynaconf import settings
 from ..analysers.analyser import Analyser

@@ -1,11 +1,11 @@
 import logging
 import sys
-from .database.database import Database
-from .strategies.balance import Balance
-from .traders.trader import Trader
-from .analysers.analyser import Analyser
-from .helpers.reporter import Reporter
-from .helpers.helper import Helper
+from src.database.database import Database
+from src.strategies.strategies_factory import StrategiesFactory
+from src.traders.trader import Trader
+from src.analysers.analyser import Analyser
+from src.helpers.reporter import Reporter
+from src.helpers.helper import Helper
 from logging.handlers import TimedRotatingFileHandler
 from dynaconf import settings
 
@@ -32,7 +32,8 @@ def main():
     reporter = Reporter()
     try:
         logger.info("Creating strategy")
-        strategy = Balance(settings.COIN, "LIQUI", "BINANCE", Trader(), Analyser(), reporter, Database(), Helper())
+
+        strategy = StrategiesFactory.create_strategy("BALANCE", settings.COIN, "LIQUI", "BINANCE", Trader(), Analyser(), reporter, Database(), Helper())
 
         logger.info("Start running current strategy")
         strategy.run()

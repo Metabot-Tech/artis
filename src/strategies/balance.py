@@ -2,6 +2,7 @@ import logging
 import time
 import sys
 import asyncio
+from .strategy import Strategy
 from ..traders.trader import Trader
 from ..analysers.analyser import Analyser
 from ..helpers.helper import Helper
@@ -22,7 +23,7 @@ class Analysis:
         self.exposure = exposure
 
 
-class Balance(object):
+class Balance(Strategy):
     _max_pending_sells = 5
     _sell_timeout = 5
     _buy_timeout = 4
