@@ -2,14 +2,14 @@ import logging
 import time
 import sys
 import asyncio
-from strategies.trader import Trader
-from strategies.analyser import Analyser
-from strategies.helper import Helper
-from database.models.trade import Trade
-from database.models.balance import Balance as BalanceModel
-from database.models.types import Types
-from database.models.status import Status
-from database.models.coins import Coins
+from ..traders.trader import Trader
+from ..analysers.analyser import Analyser
+from ..helpers.helper import Helper
+from ..database.models.trade import Trade
+from ..database.models.balance import Balance as BalanceModel
+from ..database.models.types import Types
+from ..database.models.status import Status
+from ..database.models.coins import Coins
 from dynaconf import settings
 
 logger = logging.getLogger(__name__)

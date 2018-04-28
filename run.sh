@@ -2,4 +2,4 @@
 
 sleep 10
 alembic upgrade head
-python app.py
+python src/app.py

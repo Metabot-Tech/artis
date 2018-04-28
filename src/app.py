@@ -1,11 +1,11 @@
 import logging
 import sys
-from database.database import Database
-from strategies.balance import Balance
-from strategies.trader import Trader
-from strategies.analyser import Analyser
-from strategies.reporter import Reporter
-from strategies.helper import Helper
+from .database.database import Database
+from .strategies.balance import Balance
+from .traders.trader import Trader
+from .analysers.analyser import Analyser
+from .helpers.reporter import Reporter
+from .helpers.helper import Helper
 from logging.handlers import TimedRotatingFileHandler
 from dynaconf import settings
 

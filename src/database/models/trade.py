@@ -1,11 +1,11 @@
 import datetime
 from sqlalchemy import Column, Integer, DateTime, String, Enum, Numeric, ForeignKey
 from sqlalchemy.orm import relationship
-from database.models.coins import Coins
-from database.models.markets import Markets
-from database.models.status import Status
-from database.models.types import Types
-from database.models.base import Base
+from .coins import Coins
+from .markets import Markets
+from .status import Status
+from .types import Types
+from .base import Base
 
 
 class Trade(Base):

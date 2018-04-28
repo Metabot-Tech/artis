@@ -2,8 +2,8 @@ import logging
 import ccxt.async as ccxt
 from liqui import Liqui
 from binance.client import Client
-from database.models.types import Types
-from database.models.status import Status
+from ..database.models.types import Types
+from ..database.models.status import Status
 from dynaconf import settings
 
 logger = logging.getLogger(__name__)

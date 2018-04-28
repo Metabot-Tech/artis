@@ -1,9 +1,9 @@
 import datetime
 from sqlalchemy import Column, Integer, DateTime, Enum, Numeric, ForeignKey
 from sqlalchemy.orm import relationship
-from database.models.coins import Coins
-from database.models.markets import Markets
-from database.models.base import Base
+from .coins import Coins
+from .markets import Markets
+from .base import Base
 
 
 class Balance(Base):

@@ -2,10 +2,10 @@ import os
 from dynaconf import settings
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from database.models.transaction import Transaction
-from database.models.trade import Trade
-from database.models.types import Types
-from database.models.status import Status
+from .models.transaction import Transaction
+from .models.trade import Trade
+from .models.types import Types
+from .models.status import Status
 
 
 class Database(object):
@@ -65,4 +65,3 @@ class Database(object):
             session.close()
 
         return data
-

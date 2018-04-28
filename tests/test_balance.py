@@ -1,18 +1,18 @@
 import unittest
 import unittest.mock as mock
 import os
-from strategies.balance import Balance
-from strategies.balance import Analysis
-from strategies.trader import Trader
-from strategies.analyser import Analyser
-from strategies.reporter import Reporter
-from strategies.helper import Helper
-from database.database import Database
-from database.models.trade import Trade
-from database.models.types import Types
-from database.models.coins import Coins
-from database.models.markets import Markets
-from database.models.status import Status
+from src.strategies.balance import Balance
+from src.strategies.balance import Analysis
+from src.traders.trader import Trader
+from src.analysers.analyser import Analyser
+from src.helpers.reporter import Reporter
+from src.helpers.helper import Helper
+from src.database.database import Database
+from src.database.models.trade import Trade
+from src.database.models.types import Types
+from src.database.models.coins import Coins
+from src.database.models.markets import Markets
+from src.database.models.status import Status
 from tests.orders import *
 from dynaconf import settings
 
@@ -106,7 +106,7 @@ class TestBalance(unittest.TestCase):
         assert status is False
 
     # TESTS BUY
-    @mock.patch('strategies.analyser.Analyser.is_filled', return_value=True)
+    @mock.patch('src.analysers.analyser.Analyser.is_filled', return_value=True)
     def test_buy_filled(self, mock_filled):
         self.mock_trader.buy.return_value = LIQUI_BUY_ORDER
 
@@ -124,7 +124,7 @@ class TestBalance(unittest.TestCase):
         self.mock_trader.buy.assert_called_once_with(LIQUI, COIN, ORDER_AMOUNT, PRICE_ASK)
         assert order is None
 
-    @mock.patch('strategies.analyser.Analyser.is_filled', return_value=False)
+    @mock.patch('src.analysers.analyser.Analyser.is_filled', return_value=False)
     def test_miss_buy(self, mock_filled):
         self.mock_trader.buy.return_value = LIQUI_BUY_ORDER
         self.strategy._handle_miss_buy = mock.Mock(return_value=Trader.fill_fetch_order(LIQUI_FETCH_BUY_ORDER, LIQUI))
@@ -327,8 +327,8 @@ class TestBalance(unittest.TestCase):
 
         volumes_wanted = self.strategy._get_trade_volumes(asks, bids, analysis)
 
-        assert volumes_wanted.get('buy') == Helper.round_down(SMALL_AMOUNT_ETH / PRICE_ASK)
-        assert volumes_wanted.get('sell') == Helper.round_down(volumes_wanted.get('buy') / HALF_EXPOSURE)
+        assert volumes_wanted.get('buy') == Helper.round_down(SMALL_AMOUNT_ETH * 0.99 / PRICE_ASK)
+        assert volumes_wanted.get('sell') == Helper.round_down(SMALL_AMOUNT_ETH * 0.99 / PRICE_ASK / HALF_EXPOSURE)
 
     def test_get_trade_volumes_wallet_coin_too_small(self):
         self.strategy.balance_eth = {"LIQUI": 1, "BINANCE": 1}
@@ -340,8 +340,8 @@ class TestBalance(unittest.TestCase):
 
         volumes_wanted = self.strategy._get_trade_volumes(asks, bids, analysis)
 
-        assert volumes_wanted.get('buy') == Helper.round_down(SMALL_AMOUNT_COIN * HALF_EXPOSURE)
-        assert volumes_wanted.get('sell') == Helper.round_down(SMALL_AMOUNT_COIN)
+        assert volumes_wanted.get('buy') == Helper.round_down(SMALL_AMOUNT_COIN * HALF_EXPOSURE * 0.99)
+        assert volumes_wanted.get('sell') == Helper.round_down(SMALL_AMOUNT_COIN * 0.99)
 
     def test_get_trade_volumes_wallet_eth_below_minimum(self):
         self.strategy.balance_eth = {"LIQUI": 0.0005, "BINANCE": 1}

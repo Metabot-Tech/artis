@@ -1,5 +1,5 @@
 import unittest
-from strategies.trader import Trader
+from src.traders.trader import Trader
 from dynaconf import settings
 
 EXPOSURE = 1.0135

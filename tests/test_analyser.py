@@ -1,9 +1,9 @@
 import unittest
 import os
 from tests.orders import *
-from strategies.analyser import Analyser
-from database.models.types import Types
-from database.models.status import Status
+from src.analysers.analyser import Analyser
+from src.database.models.types import Types
+from src.database.models.status import Status
 from dynaconf import settings
 
 LIQUI = "LIQUI"
