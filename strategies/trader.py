@@ -32,11 +32,13 @@ class Trader(object):
         self.markets = {
             'LIQUI': ccxt.liqui({
                 'apiKey': settings.LIQUI.API_KEY,
-                'secret': settings.LIQUI.API_SECRET
+                'secret': settings.LIQUI.API_SECRET,
+                'timeout': settings.LIQUI.TIMEOUT
             }),
             'BINANCE': ccxt.binance({
                 'apiKey': settings.BINANCE.API_KEY,
-                'secret': settings.BINANCE.API_SECRET
+                'secret': settings.BINANCE.API_SECRET,
+                'timeout': settings.BINANCE.TIMEOUT
             })
         }
 
